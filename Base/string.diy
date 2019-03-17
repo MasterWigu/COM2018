@@ -1,0 +1,44 @@
+public integer strlen(string s)
+
+integer strcmp(string s1, string s2) {
+	integer a := -1;
+
+	do {
+	a++;
+	if s1[a] <> s2[a] then {
+		if s1[a] < s2[a] then
+			strcmp := -1;
+		else
+			strcmp := 1;
+	}
+
+	if ~s1[a] then
+		break;
+	} while 1;
+	strcmp := 0;
+}
+
+
+string strcpy(string dest, const string src) {
+	string tmp = dest;
+	integer a := 0;
+
+	do {
+		dest[a] := src[a];
+		a++;
+	} while src[a-1] <> "\0";
+	strcpy := tmp
+}
+
+
+string strchr(const string s, integer c) {
+	integer len := strlen(s);
+	integer a := 0;
+
+	do {
+		if s[a] = c then
+			strchr := s+a;
+		a++;
+	} while s[a] <> "\0";
+	strchr := 0;
+}
