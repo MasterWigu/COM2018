@@ -18,7 +18,6 @@ void yyerror(char *s);
 	int i;		/* integer value */
 	double d;	/* double value */
 	char *s;	/* symbol name or string literal */
-	Node *n;	/* tree node */
 }
 
 %token <i> INTVALUE
@@ -29,7 +28,7 @@ void yyerror(char *s);
 %token PUBLIC CONST
 %token INT STR NUM VOID
 %token INC DEC GE LE EQ NE ASSIGN
-%token IDENTIFIER
+%token IDENTIFIER SEMICOLON
 %token LF
 
 
@@ -47,8 +46,11 @@ int main(int argc, char *argv[]) {
 	while ((tk = yylex())) 
 		if (tk > YYERRCODE) {
 			printf("%d:\t%s\n", tk, yyname[tk]);
-			if (tk == 260)
-				printf("AHAHAH %s\n", yylval.s);
+			/*
+			if (tk == 257)
+				printf("AHAAH %d XXX\n", yylval.i);
+			if (tk == 259)
+				printf("BHBHBH %s YYY\n", yylval.s);*/
 		}
 		else
 			printf("%d:\t%c\n", tk, tk);

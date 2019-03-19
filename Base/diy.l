@@ -1,4 +1,4 @@
-%option stack noyywrap yylineno 8bit debug 
+%option stack noyywrap yylineno 8bit
 %{
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,7 +12,7 @@ int yyerror(char *s) { printf("%s\n",s); return 1; }
 %}
 
 
-%x COM XSTR XSTRBACK
+%x COM XSTR XSTRBACK XTERMINATOR
 
 %%
 "==".*"\n"   		;
@@ -58,26 +58,28 @@ int yyerror(char *s) { printf("%s\n",s); return 1; }
 
 ":="					return ASSIGN;
 
+<XTERMINATOR>[;\n]				BEGIN INITIAL; return SEMICOLON;
+<XTERMINATOR>. 					yyless(0); BEGIN INITIAL;
 
+[a-zA-Z][a-zA-Z_0-9]* 		yylval.s = dupstr(yytext); BEGIN XTERMINATOR; return IDENTIFIER;
 
-[a-zA-Z][a-zA-Z_0-9]* yylval.s = dupstr(yytext); return IDENTIFIER;
 
 
 [1-9][0-9]*				{ errno = 0; yylval.i = strtol(yytext, 0, 10);
 						if (errno == ERANGE) yyerror("integer overflow");
-						return INTVALUE; }
+						BEGIN XTERMINATOR; return INTVALUE; }
 
 0[0-9]*					{ errno = 0; yylval.i = strtol(yytext, 0, 10);
 						if (errno == ERANGE) yyerror("integer overflow");
-						return INTVALUE; }
+						BEGIN XTERMINATOR; return INTVALUE; }
 
 0b[01]*					{ errno = 0; yylval.i = strtol(yytext, 0, 2);
 						if (errno == ERANGE) yyerror("integer overflow");
-						return INTVALUE; }
+						BEGIN XTERMINATOR; return INTVALUE; }
 
 [0-9]+\.[0-9]+([Ee][+-]?[0-9]+)? 	{errno = 0; yylval.d = strtod(yytext, 0);
 									if(errno == ERANGE) yyerror("number overflow");
-									return NUMVALUE;}
+									BEGIN XTERMINATOR; return NUMVALUE;}
 
 \"									yy_push_state(XSTR); yylval.s = dupstr("");
 <XSTR>\"							yy_pop_state(); return STRVALUE;
@@ -95,14 +97,13 @@ int yyerror(char *s) { printf("%s\n",s); return 1; }
 
 
 
+[)!]						BEGIN XTERMINATOR; return *yytext;
+";"							return SEMICOLON;
+
+[-+*/%&|~<>(,\[\]{}#]	return *yytext;
 
 
-
-[-+*/%!&|~<>();,\[\]{}#]	return *yytext;
-"\n" 						return LF;
-
-
-[ \t\r]          ;
+[ \n\t\r]          ;
 .			yyerror("Unknown character");
 
 %%
