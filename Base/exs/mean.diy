@@ -1,0 +1,16 @@
+public integer rand();
+public integer readi();
+
+public integer entry (integer argc, string *argv, string *envp) {
+	integer times := readi();
+	integer i := 0;
+	number temp := 0;
+
+	for i in 1 upto times do {
+		temp := temp + rand();
+	}
+	temp := temp / times;
+
+	printd(temp);
+	entry  := 0;
+};

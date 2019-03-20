@@ -16,7 +16,7 @@ integer strcmp(string s1, string s2) {
 		break;
 	} while 1;
 	strcmp := 0;
-}
+};
 
 
 string strcpy(string dest, const string src) {
@@ -28,7 +28,7 @@ string strcpy(string dest, const string src) {
 		a++;
 	} while src[a-1] <> "\0";
 	strcpy := tmp
-}
+};
 
 
 string strchr(const string s, integer c) {
@@ -41,4 +41,4 @@ string strchr(const string s, integer c) {
 		a++;
 	} while s[a] <> "\0";
 	strchr := 0;
-}
+};

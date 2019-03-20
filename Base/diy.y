@@ -28,7 +28,7 @@ void yyerror(char *s);
 %token PUBLIC CONST
 %token INT STR NUM VOID
 %token INC DEC GE LE EQ NE ASSIGN
-%token IDENTIFIER SEMICOLON
+%token IDENTIFIER
 %token LF
 
 

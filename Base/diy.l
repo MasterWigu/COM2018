@@ -58,7 +58,7 @@ int yyerror(char *s) { printf("%s\n",s); return 1; }
 
 ":="					return ASSIGN;
 
-<XTERMINATOR>[;\n]				BEGIN INITIAL; return SEMICOLON;
+<XTERMINATOR>[;\n]				BEGIN INITIAL; return *dupstr(";");
 <XTERMINATOR>. 					yyless(0); BEGIN INITIAL;
 
 [a-zA-Z][a-zA-Z_0-9]* 		yylval.s = dupstr(yytext); BEGIN XTERMINATOR; return IDENTIFIER;
@@ -98,9 +98,9 @@ int yyerror(char *s) { printf("%s\n",s); return 1; }
 
 
 [)!]						BEGIN XTERMINATOR; return *yytext;
-";"							return SEMICOLON;
 
-[-+*/%&|~<>(,\[\]{}#]	return *yytext;
+
+[-+*/%&|~<>(,\[\]{}#;]	return *yytext;
 
 
 [ \n\t\r]          ;

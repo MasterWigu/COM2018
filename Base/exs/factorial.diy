@@ -1,0 +1,12 @@
+public number fact(integer n)
+
+public integer entry (integer argc, string *argv, string *envp) {
+	number fact := 0;
+	if argc > 1 then 
+		fact := factorial(atoi(argv[1]));
+	else
+		fact := factorial(5);
+	printd(fact);
+
+	entry := 0;
+};
