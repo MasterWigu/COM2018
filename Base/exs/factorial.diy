@@ -1,4 +1,4 @@
-public number fact(integer n)
+public number factorial(integer n)
 
 public integer entry (integer argc, string *argv, string *envp) {
 	number fact := 0;
