@@ -9,18 +9,18 @@
 char *dupstr(const char*s) { return strdup(s); }
 void charToDouble(const char* text);
 int yyerror(char *s) { printf("%s\n",s); return 1; }
+int xterminator = 0;
 %}
-
 
 %x COM XSTR XSTRBACK XTERMINATOR
 
 %%
-"==".*"\n"   		;
+"==".*"\n"   			{if (xterminator) {xterminator = 0; return *dupstr(";");}};
 
 <INITIAL,COM>"=<"		yy_push_state(COM);
 
 
-<COM>.|\n				;
+<COM>.|\n				{if (xterminator) {xterminator = 0; return *dupstr(";");}};
 <COM>"=>"				yy_pop_state();
 
 
@@ -58,29 +58,26 @@ int yyerror(char *s) { printf("%s\n",s); return 1; }
 
 ":="					return ASSIGN;
 
-<XTERMINATOR>[ \t]*[;\n]				BEGIN INITIAL; return *dupstr(";");
 
-<XTERMINATOR>. 					yyless(0); BEGIN INITIAL;
-
-[a-zA-Z][a-zA-Z_0-9]* 		yylval.s = dupstr(yytext); BEGIN XTERMINATOR; return IDENTIFIER;
+[a-zA-Z][a-zA-Z_0-9]* 		yylval.s = dupstr(yytext); xterminator = 1; return IDENTIFIER;
 
 
 
 [1-9][0-9]*				{ errno = 0; yylval.i = strtol(yytext, 0, 10);
 						if (errno == ERANGE) yyerror("integer overflow");
-						BEGIN XTERMINATOR; return INTVALUE; }
+						xterminator=1; return INTVALUE; }
 
 0[0-9]*					{ errno = 0; yylval.i = strtol(yytext, 0, 10);
 						if (errno == ERANGE) yyerror("integer overflow");
-						BEGIN XTERMINATOR; return INTVALUE; }
+						xterminator=1; return INTVALUE; }
 
 0b[01]*					{ errno = 0; yylval.i = strtol(yytext, 0, 2);
 						if (errno == ERANGE) yyerror("integer overflow");
-						BEGIN XTERMINATOR; return INTVALUE; }
+						xterminator=1; return INTVALUE; }
 
 [0-9]+\.[0-9]+([Ee][+-]?[0-9]+)? 	{errno = 0; yylval.d = strtod(yytext, 0);
 									if(errno == ERANGE) yyerror("number overflow");
-									BEGIN XTERMINATOR; return NUMVALUE;}
+									xterminator=1; return NUMVALUE;}
 
 \"									yy_push_state(XSTR); yylval.s = dupstr("");
 <XSTR>\"							yy_pop_state(); return STRVALUE;
@@ -98,14 +95,15 @@ int yyerror(char *s) { printf("%s\n",s); return 1; }
 
 
 
-[)!]						BEGIN XTERMINATOR; return *yytext;
+[)!]						xterminator = 1; return *yytext;
 
 
-[-+*/%&|~<>(,\[\]{}#;]	return *yytext;
+[-+*/%&|~<>(,\[\]{}#]	return *yytext;
 
-
-[ \n\t\r]          ;
-.			yyerror("Unknown character");
+\;						xterminator = 0; return *dupstr(";");				
+[ \t\r]          	;
+\n 					{if (xterminator) {xterminator = 0; return *dupstr(";");}};	
+.					yyerror("Unknown character");
 
 %%
 
