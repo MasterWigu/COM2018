@@ -11,8 +11,7 @@ CFLAGS=-g -DYYDEBUG
 $(LANG): initial.y $(LANG).l
 	byacc -dv initial.y
 	flex -l $(LANG).l
-	$(LINK.c) -o $(LANG) $(ARCH) lex.yy.c y.tab.c -l$(UTIL)
-
+	$(LINK.c) -o $(LANG) $(ARCH) lex.yy.c y.tab.c
 examples:: $(LANG)
 	make -C $(EXS)
 
