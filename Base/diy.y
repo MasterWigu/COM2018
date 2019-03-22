@@ -43,16 +43,8 @@ int main(int argc, char *argv[]) {
 	extern YYSTYPE yylval;
 	int tk;
 	while ((tk = yylex())) 
-		if (tk > YYERRCODE) {
+		if (tk > YYERRCODE)
 			printf("%d:\t%s\n", tk, yyname[tk]);
-			
-			if (tk == 257 || tk == 258) {
-				printf("AHAAH %d XXX\n", yylval.i);
-			}
-			if (tk == 260) {
-				printf("BHBHBH %s YYY\n", yylval.s);
-			}
-		}
 		else
 			printf("%d:\t%c\n", tk, tk);
 

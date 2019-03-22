@@ -4,41 +4,48 @@ integer strcmp(string s1, string s2) {
 	integer a := -1;
 
 	do {
-	a++;
-	if s1[a] <> s2[a] then {
-		if s1[a] < s2[a] then
-			strcmp := -1;
-		else
-			strcmp := 1;
-	}
+		a++;
+		if s1[a] <> s2[a] then {
+			if s1[a] < s2[a] then {
+				strcmp := -1;
+				break;
+			}
+			else {
+				strcmp := 1;
+				break;
+			}
+		}
 
-	if ~s1[a] then
-		break;
+		if s1[a] = 0 then {
+			strcmp := 0;
+			break;
+		}
 	} while 1;
-	strcmp := 0;
+
 };
 
 
 string strcpy(string dest, const string src) {
-	string tmp = dest;
-	integer a := 0;
+	strcpy := dest;
+	integer a := -1;
 
 	do {
-		dest[a] := src[a];
 		a++;
+		dest[a] := src[a];
 	} while src[a-1] <> "\0";
-	strcpy := tmp
 };
 
 
 string strchr(const string s, integer c) {
-	integer len := strlen(s);
-	integer a := 0;
+	integer a := -1;
+	strchr := 0;
 
 	do {
-		if s[a] = c then
-			strchr := s+a;
 		a++;
+		if s[a] = c then {
+			strchr := &s[a];
+			break;
+		}
 	} while s[a] <> "\0";
-	strchr := 0;
+
 };

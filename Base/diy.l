@@ -19,91 +19,88 @@ int xterminator = 0;
 
 <INITIAL,COM>"=<"		yy_push_state(COM);
 
-
 <COM>.|\n				{if (xterminator) {xterminator = 0; return *dupstr(";");}};
 <COM>"=>"				yy_pop_state();
 
 
-"if"					return IF;
-"then"					return THEN;
-"else"					return ELSE;
-"do"					return DO;
-"while"					return WHILE;
-"for"					return FOR;
-"in"					return IN;
-"upto"					return UPTO;
-"downto"				return DOWNTO;
-"step"					return STEP;
-"break"					return BREAK;
-"continue"				return CONTINUE;
+"if"					xterminator=1; return IF;
+"then"					xterminator=1; return THEN;
+"else"					xterminator=1; return ELSE;
+"do"					xterminator=1; return DO;
+"while"					xterminator=1; return WHILE;
+"for"					xterminator=1; return FOR;
+"in"					xterminator=1; return IN;
+"upto"					xterminator=1; return UPTO;
+"downto"				xterminator=1; return DOWNTO;
+"step"					xterminator=1; return STEP;
+"break"					xterminator=1; return BREAK;
+"continue"				xterminator=1; return CONTINUE;
 
-"public"				return PUBLIC;
-"const"					return CONST;
+"public"				xterminator=1; return PUBLIC;
+"const"					xterminator=1; return CONST;
 
-"integer"				return INT;
-"string"				return STR;
-"number"				return NUM;
-"void"					return VOID;
-
-
-
-"++"					return INC;
-"--"					return DEC;
-
-">="					return GE;
-"<="					return LE;
-
-"="						return EQ;
-"<>"					return NE;
-
-":="					return ASSIGN;
+"integer"				xterminator=1; return INT;
+"string"				xterminator=1; return STR;
+"number"				xterminator=1; return NUM;
+"void"					xterminator=1; return VOID;
 
 
-[a-zA-Z][a-zA-Z_0-9]* 		yylval.s = dupstr(yytext); xterminator = 1; return IDENTIFIER;
+"++"					xterminator=0; return INC;
+"--"					xterminator=0; return DEC;
+
+">="					xterminator=0; return GE;
+"<="					xterminator=0; return LE;
+
+"="						xterminator=0; return EQ;
+"<>"					xterminator=0; return NE;
+
+":="					xterminator=0; return ASSIGN;
+
+
+[a-zA-Z][a-zA-Z_0-9]* 				yylval.s = dupstr(yytext); xterminator = 1; return IDENTIFIER;
 
 
 
-[1-9][0-9]*				{ errno = 0; yylval.i = strtol(yytext, 0, 10);
-						if (errno == ERANGE) yyerror("integer overflow");
-						xterminator=1; return INTVALUE; }
+[1-9][0-9]*							{ errno = 0; yylval.i = strtol(yytext, 0, 10);
+									if (errno == ERANGE) yyerror("integer overflow (decimal)");
+									xterminator=1; return INTVALUE; }
 
-0[0-9]*					{ errno = 0; yylval.i = strtol(yytext, 0, 10);
-						if (errno == ERANGE) yyerror("integer overflow");
-						xterminator=1; return INTVALUE; }
+0[0-9]*								{ errno = 0; yylval.i = strtol(yytext, 0, 10);
+									if (errno == ERANGE) yyerror("integer overflow (octal)");
+									xterminator=1; return INTVALUE; }
 
-0b[01]*					{ errno = 0; yylval.i = strtol(yytext, 0, 2);
-						if (errno == ERANGE) yyerror("integer overflow");
-						xterminator=1; return INTVALUE; }
+0b[01]*								{ errno = 0; yylval.i = strtol(yytext, 0, 2);
+									if (errno == ERANGE) yyerror("integer overflow (binary)");
+									xterminator=1; return INTVALUE; }
 
 [0-9]+\.[0-9]+([Ee][+-]?[0-9]+)? 	{errno = 0; yylval.d = strtod(yytext, 0);
 									if(errno == ERANGE) yyerror("number overflow");
-									xterminator=1; return NUMVALUE;}
+									 return NUMVALUE;}
 
-\"									yy_push_state(XSTR); yylval.s = dupstr("");
-<XSTR>\"							yy_pop_state(); return STRVALUE;
+
+
+\"(.|\n|\t|\r|"\"")*\"				yylval.s = malloc(yyleng); *yylval.s = 0; yyless(1); yy_push_state(XSTR);
+<XSTR>\"							yy_pop_state(); xterminator=1; return STRVALUE;
 <XSTR>\\							yy_push_state(XSTRBACK);
+<XSTR>\n 							strcat(yylval.s, "\n");
 <XSTR>.								strcat(yylval.s, yytext);
 
 <XSTRBACK>t							strcat(yylval.s, "\t"); yy_pop_state();
 <XSTRBACK>n							strcat(yylval.s, "\n"); yy_pop_state();
 <XSTRBACK>r							strcat(yylval.s, "\r"); yy_pop_state();
 <XSTRBACK>\"						strcat(yylval.s, "\"");	yy_pop_state();
-<XSTRBACK>[0-9A-Fa-f][0-9A-Fa-f]		{charToDouble(yytext);
-										yy_pop_state();}
-<XSTRBACK>[0-9A-Fa-f]					{charToDouble(yytext);
-										yy_pop_state();}
+<XSTRBACK>"0"						;
+<XSTRBACK>[0-9A-Fa-f][0-9A-Fa-f]	charToDouble(yytext);   yy_pop_state();
+<XSTRBACK>[0-9A-Fa-f]				charToDouble(yytext);   yy_pop_state();
 
+[)!]								xterminator = 1; return *yytext;
 
+\;									xterminator = 0; return *dupstr(";");		
+\n 									if (xterminator) {xterminator = 0; return *dupstr(";");}	
 
-[)!]						xterminator = 1; return *yytext;
-
-
-[-+*/%&|~<>(,\[\]{}#]	return *yytext;
-
-\;						xterminator = 0; return *dupstr(";");				
-[ \t\r]          	;
-\n 					{if (xterminator) {xterminator = 0; return *dupstr(";");}};	
-.					yyerror("Unknown character");
+[-+*/%&|~<>(,\[\]{}#]				xterminator=0; return *yytext;		
+[ \t\r]          					;
+.									yyerror("Unknown character");
 
 %%
 
