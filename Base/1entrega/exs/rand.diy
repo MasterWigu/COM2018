@@ -1,0 +1,10 @@
+integer Xn := 100003;	
+
+public integer rand() {
+	Xn := (Xn * 27983 + 149) % 1000000;
+	rand := Xn;
+};
+
+public void srand(integer n) {
+	Xn := n;
+};
