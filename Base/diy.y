@@ -269,7 +269,6 @@ static void initFuncBody(char *funcName) {
 	for (i=0; i< attr->attribNum; i++) {
 		IDnew(attr->attribTypes[i], attr->attribNames[i], 0);
 	}
-	//IDnew(typ-1000, funcName, 0); /*declare simple variable with name of function to allow "return"*/
 }
 
 static int usePtr(char *id) {
