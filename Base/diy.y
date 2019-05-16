@@ -1,34 +1,29 @@
 %{
+/* $Id: diy.y,v 1.0 2019/02/06 17:25:13 prs Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <stdarg.h>
-#include "tabid.h"
+#include <string.h>
 #include "node.h"
+#include "tabid.h"
+
 extern int yylex();
-extern int yyerror(char*);
-static char buf[100]; /* error messages */
-static int gt, pos, dim(Node*);
-static void *gtr, *root;
-static Node *name(Node*);
-static void declareType(Node *typ, Node *init);
-static void createFunc(int ret, Node* nm);
-static void initFuncBody(char *funcName);
-
-typedef struct fattrib{
-	int attribNum;
-	int *attribTypes;
-	char **attribNames;
-} *funcAttribs;
-
-Node *tempNode;
+void yyerror(char *s);
+void declare(int pub, int cnst, Node *type, char *name, Node *value);
+void enter(int pub, int typ, char *name);
+int checkargs(char *name, Node *args);
+int nostring(Node *arg1, Node *arg2);
+int intonly(Node *arg, int);
+int noassign(Node *arg1, Node *arg2);
+static int ncicl;
+static char *fpar;
 %}
 
 %union {
 	int i;			/* integer value */
 	double r;		/* real value */
 	char *s;		/* symbol name or string literal */
-	Node *n;		/* node */
+	Node *n;		/* node pointer */
 };
 
 %token <i> INT
@@ -36,341 +31,175 @@ Node *tempNode;
 %token <s> ID STR
 %token DO WHILE IF THEN FOR IN UPTO DOWNTO STEP BREAK CONTINUE
 %token VOID INTEGER STRING NUMBER CONST PUBLIC INCR DECR
-%token ATR NE GE LE ELSE
-
-
 %nonassoc IFX
 %nonassoc ELSE
+
 %right ATR
 %left '|'
 %left '&'
-%left '~'
+%nonassoc '~'
 %left '=' NE
-%left '<' '>' GE LE
+%left GE LE '>' '<'
 %left '+' '-'
 %left '*' '/' '%'
-%nonassoc ADDR UMINUS PTRR '!'
+%nonassoc UMINUS '!' NOT REF
 %nonassoc '[' '('
 
-%token IFX UMINUS ADDR LOCAL INIT PUB PRIV CON TYPE MEM ATR NIL CONS DEF TYPEX PLCOM CSTR
-%token DECL GLOBAL PTR PTRR FUNC PARAM BODY BPARAMS BPARAM ALLOC INSTR LOAD BSUB
-%token INDEX CALL FACT NOT AINC ADEC BINC BDEC MUL DIV MOD ADD LT GT EQ AND OR ARG
-%token INTEGERP NUMBERP STRINGP IDARGS COND EXP STOP ZERO
+%type <n> tipo init finit blocop params
+%type <n> bloco decls param base stmt step args list end brk lv expr
+%type <i> ptr intp public
 
-%type<n> decl def priv cons type initid params param optbody body bparams bparam updn stp optint instr instrs lvalue expr args
-
-
+%token LOCAL POSINC POSDEC PTR CALL START PARAM NIL
 %%
+file	:
+	| file error ';'
+	| file public tipo ID ';'	{ IDnew($3->value.i, $4, 0); declare($2, 0, $3, $4, 0); }
+	| file public CONST tipo ID ';'	{ IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, 0); }
+	| file public tipo ID init	{ IDnew($3->value.i, $4, 0); declare($2, 0, $3, $4, $5); }
+	| file public CONST tipo ID init	{ IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, $6); }
+	| file public tipo ID { enter($2, $3->value.i, $4); } finit { function($2, $3, $4, $6); }
+	| file public VOID ID { enter($2, 4, $4); } finit { function($2, intNode(VOID, 4), $4, $6); }
+	;
 
+public	:               { $$ = 0; }
+	| PUBLIC        { $$ = 1; }
+	;
 
-file	: decl 									{ printNode($1, 0, yynames); }
+ptr	:               { $$ = 0; }
+	| '*'           { $$ = 10; }
+	;
 
-decl   	:										{ $$ = nilNode(NIL); }
-		| decl def								{ $$ = binNode(DECL, $1, $2); }
-		;
+tipo	: INTEGER ptr	{ $$ = intNode(INTEGER, 1+$2); }
+	| STRING ptr	{ $$ = intNode(STRING, 2+$2); }
+	| NUMBER ptr	{ $$ = intNode(NUMBER, 3+$2); }
+	;
 
-def		: priv cons type ID initid ';'			{ $$ = binNode(INIT, binNode(DEF, binNode(TYPEX, binNode(PLCOM, $1, $2), $3), strNode(ID, $4)), $5); declareVar($3, $4, $5); }
-		| priv cons type ID '(' params ')'		{ tempNode = binNode(DEF, binNode(TYPEX, binNode(PLCOM, $1, $2), $3), binNode(IDARGS, strNode(ID, $4), $6)); declareFunc($3, $4, $6); IDpush(); initFuncBody($4);}  optbody ';' { $$ = binNode(INIT, tempNode, $9); IDpop(); }
-		| error ';'								{ $$ = nilNode(NIL); }
-		| error '}'								{ $$ = nilNode(NIL); }
-		;
-
-priv	:										{ $$ = nilNode(NIL); }				
-		| PUBLIC								{ $$ = nilNode(PUB); }
-		;
-
-cons 	:										{ $$ = nilNode(NIL); }
-		| CONST									{ $$ = nilNode(CONS); }
-		;
-
-
-
-type	: INTEGER 								{ $$ = nilNode(INTEGER);  $$->info = INTEGER;}
-		| NUMBER 								{ $$ = nilNode(NUMBER); $$->info = NUMBER; }
-		| STRING 								{ $$ = nilNode(STRING); $$->info = STRING; }
-		| INTEGER '*' 							{ $$ = nilNode(INTEGERP); $$->info = INTEGERP; }
-		| NUMBER '*'							{ $$ = nilNode(NUMBERP); $$->info = NUMBERP; }
-		| STRING '*'							{ $$ = nilNode(STRINGP); $$->info = STRINGP; }
-		| VOID 									{ $$ = nilNode(VOID); $$->info = VOID; }
-		;
-		
-
-initid	:										{ $$ = nilNode(NIL); $$->info = 0; }
-		| ATR INT 								{ $$ = intNode(INT, $2); $$->info = INTEGER; }
-		| ATR cons STR 							{ $$ = strNode(CSTR, $3); $$->info = STRING; }
-		| ATR REAL 								{ $$ = realNode(REAL, $2); $$->info = NUMBER ;}
-		| ATR ID 								{ $$ = strNode(ID, $2); $$->info = IDfind($2, 0); }
-		;
-
-params	:										{ $$ = nilNode(NIL); }
-		| params ',' param 						{ $$ = binNode(PARAM, $1, $3); }
-		| param 								{ $$ = binNode(PARAM, nilNode(NIL), $1); }
-		;
-
-
-param 	: type ID 								{ $$ = binNode(TYPE, $1, strNode(ID,$2));}
-		;
-
-bparam 	: type ID 								{ $$ = binNode(TYPE, $1, strNode(ID,$2)); declareVar($1, $2, 0); }
-		;
-
-
-optbody :										{ $$ = nilNode(NIL); }
-		| body 									{ $$ = $1; }
-		;
-
-body	: '{' bparams instrs '}' 				{ $$ = binNode(BODY, $2, $3);}
-		| error '}'								{ $$ = nilNode(NIL); }
-		;
-
-bparams :										{ $$ = nilNode(NIL); }
-		| bparams bparam ';'					{ $$ = binNode(BPARAMS, $1, $2); }
-		;
-
-
-updn 	: UPTO expr								{ $$ = uniNode(UPTO, $2); }
-		| DOWNTO expr 							{ $$ = uniNode(DOWNTO, $2); }
-		;
-
-stp 	:										{ $$ = nilNode(NIL); }
-		| STEP expr 							{ $$ = uniNode(STEP, $2); }
-		;
-
-optint 	:										{ $$ = nilNode(NIL); }
-		| INT 									{ $$ = intNode(INT, $1); }
-		;
-
-instr 	: IF expr THEN instr %prec IFX 			{ $$ = binNode(IF, $2, $4); }
-		| IF expr THEN instr ELSE instr 		{ $$ = binNode(ELSE, binNode(IF, $2, $4), $6); }
-		| DO instr WHILE expr ';' 				{ $$ = binNode(DO, $2, uniNode(WHILE, $4)); }
-		| FOR lvalue IN expr updn stp DO instr { $$ = binNode(FOR, binNode(COND, binNode(EXP, $2, $4), binNode(STOP, $5, $6)), uniNode(DO, $8)); }
-		| expr ';'								{ $$ = $1; }
-		| body 									{ $$ = $1; }
-		| BREAK optint ';' 						{ $$ = uniNode(BREAK, $2); }
-		| CONTINUE optint ';' 					{ $$ = uniNode(CONTINUE, $2); }
-		| lvalue '#' expr ';' 					{ $$ = binNode(ALLOC, $3, $1); }
-		| error ';'								{ $$ = nilNode(NIL); }
-		;
-
-instrs  :										{ $$ = nilNode(NIL); }
-		| instrs instr 							{ $$ = binNode(INSTR, $1, $2); }
-		;
-
-lvalue	: ID 									{ $$ = strNode(ID, $1); $$->info = IDfind($1, 0); }
-		| lvalue '[' expr ']' 					{ $$ = binNode(INDEX, $1, $3); $$->info = indexVar($1->info, $3->info);}
-		| '*' ID 								{ $$ = uniNode(LOAD, strNode(ID, $2)); $$-> info = usePtr($2); }
-		;
-
-expr	: lvalue								{ $$ = uniNode(LOAD, $1); $$->info = $1->info; }	
-		| '(' expr ')'							{ $$ = $2; $$->info = $2->info; }
-		| INT 									{ $$ = intNode(INT, $1); if ($1 == 0) $$->info = ZERO; else $$->info = INTEGER; }
-		| STR 									{ $$ = strNode(STR, $1); $$->info = STRING; }
-		| REAL 									{ $$ = realNode(REAL, $1); $$->info = NUMBER; }
-		| ID '(' args ')'	 					{ $$ = binNode(CALL, strNode(ID, $1), $3); $$->info = callFunc($1, $3); }
-		| ID '(' ')'							{ $$ = binNode(CALL, strNode(ID, $1), nilNode(NIL)); $$->info = callFunc($1, 0); }
-      	| '-' expr %prec UMINUS					{ $$ = uniNode(UMINUS, $2); if($2->info !=INTEGER && $2->info != ZERO && $2->info !=NUMBER) {yyerror("Invalid type for opperand '-x'"); $$->info = INTEGER;} else $$->info=$2->info; }
-      	| expr '!'								{ $$ = uniNode(FACT, $1); if($1->info !=INTEGER && $1->info != ZERO) yyerror("Invalid type for opperand '!'"); $$->info = INTEGER; }
-		| '&' lvalue %prec ADDR					{ $$ = uniNode(PTR, $2); $$->info = getMem($2->info); }
-		| '~' expr								{ $$ = uniNode(NOT, $2); if($2->info !=INTEGER && $2->info != ZERO) yyerror("Invalid type for opperand '~'"); $$->info = INTEGER; }
-		| lvalue INCR							{ $$ = uniNode(AINC, $1); if($1->info !=INTEGER && $1->info != ZERO) yyerror("Invalid type for opperand '++'"); $$->info = INTEGER; }
-		| lvalue DECR 							{ $$ = uniNode(ADEC, $1); if($1->info !=INTEGER && $1->info != ZERO) yyerror("Invalid type for opperand '--'"); $$->info = INTEGER; }
-		| INCR lvalue							{ $$ = uniNode(BINC, $2); if($2->info !=INTEGER && $2->info != ZERO) yyerror("Invalid type for opperand '++'"); $$->info = INTEGER; }
-		| DECR lvalue							{ $$ = uniNode(BDEC, $2); if($2->info !=INTEGER && $2->info != ZERO) yyerror("Invalid type for opperand '--'"); $$->info = INTEGER; }
-     	| expr '*' expr							{ $$ = binNode(MUL, $1, $3); $$->info = checkBinIntNum($1->info, $3->info, "*"); }
-     	| expr '/' expr							{ $$ = binNode(DIV, $1, $3); $$->info = checkBinIntNum($1->info, $3->info, "/"); }
-     	| expr '%' expr							{ $$ = binNode(MOD, $1, $3); $$->info = checkBinIntNum($1->info, $3->info, "%"); }
-    	| expr '+' expr							{ $$ = binNode(ADD, $1, $3); $$->info = checkBinIntNum($1->info, $3->info, "+"); }
-    	| expr '-' expr							{ $$ = binNode(BSUB, $1, $3); $$->info = checkBinIntNum($1->info, $3->info, "-"); }
-		| expr '<' expr							{ $$ = binNode(LT, $1, $3); $$->info = checkBinIntNumStr($1->info, $3->info, "<"); }
-		| expr '>' expr							{ $$ = binNode(GT, $1, $3); $$->info = checkBinIntNumStr($1->info, $3->info, ">"); }
-		| expr GE expr							{ $$ = binNode(GE, $1, $3); $$->info = checkBinIntNumStr($1->info, $3->info, ">="); }
-		| expr LE expr							{ $$ = binNode(LE, $1, $3); $$->info = checkBinIntNumStr($1->info, $3->info, "<="); }
-		| expr '=' expr							{ $$ = binNode(EQ, $1, $3); $$->info = checkBinIntNumStr($1->info, $3->info, "="); }
-		| expr NE expr							{ $$ = binNode(NE, $1, $3); $$->info = checkBinIntNumStr($1->info, $3->info, "<>"); }
-    	| expr '&' expr							{ $$ = binNode(AND, $1, $3); if($1->info !=INTEGER && $1->info != ZERO || $3->info !=INTEGER && $3->info != ZERO) yyerror("Invalid types for opperand '&'"); $$->info = INTEGER; }
-    	| expr '|' expr							{ $$ = binNode(OR, $1, $3); if($1->info !=INTEGER && $1->info != ZERO || $3->info !=INTEGER && $3->info != ZERO) yyerror("Invalid types for opperand '|'"); $$->info = INTEGER; }
-		| lvalue ATR expr						{ $$ = binNode(ATR, $3, $1); $$->info = checkAtr($1->info, $3->info); }
+init	: ATR ID ';'		{ $$ = strNode(ID, $2); $$->info = IDfind($2, 0) + 10; }
+	| ATR INT ';'		{ $$ = intNode(INT, $2); $$->info = 1; }
+	| ATR '-' INT ';'	{ $$ = intNode(INT, -$3); $$->info = 1; }
+	| ATR STR ';'		{ $$ = strNode(STR, $2); $$->info = 2; }
+	| ATR CONST STR ';'	{ $$ = strNode(CONST, $3); $$->info = 2+5; }
+	| ATR REAL ';'		{ $$ = realNode(REAL, $2); $$->info = 3; }
+	| ATR '-' REAL ';'	{ $$ = realNode(REAL, -$3); $$->info = 3; }
         ;
 
-args	: expr									{ $$ = binNode(ARG, nilNode(NIL), $1); }
-		| args ',' expr 						{ $$ = binNode(ARG, $1, $3); }
-		;
+finit   : '(' params ')' blocop { $$ = binNode('(', $4, $2); }
+	| '(' ')' blocop        { $$ = binNode('(', $3, 0); }
+	;
 
+blocop  : ';'   { $$ = 0; }
+        | bloco ';'   { $$ = $1; }
+        ;
 
+params	: param
+	| params ',' param      { $$ = binNode(',', $1, $3); }
+	;
+
+bloco	: '{' { IDpush(); } decls list end '}'    { $$ = binNode('{', $5 ? binNode(';', $4, $5) : $4, $3); IDpop(); }
+	;
+
+decls	:                       { $$ = 0; }
+	| decls param ';'       { $$ = binNode(';', $1, $2); }
+	;
+
+param	: tipo ID               { $$ = binNode(PARAM, $1, strNode(ID, $2));
+                                  IDnew($1->value.i, $2, 0);
+                                  if (IDlevel() == 1) fpar[++fpar[0]] = $1->value.i;
+                                }
+	;
+
+stmt	: base
+	| brk
+	;
+
+base	: ';'                   { $$ = nilNode(VOID); }
+	| DO { ncicl++; } stmt WHILE expr ';' { $$ = binNode(WHILE, binNode(DO, nilNode(START), $3), $5); ncicl--; }
+	| FOR lv IN expr UPTO expr step DO { ncicl++; } stmt       { $$ = binNode(';', binNode(ATR, $4, $2), binNode(FOR, binNode(IN, nilNode(START), binNode(LE, uniNode(PTR, $2), $6)), binNode(';', $10, binNode(ATR, binNode('+', uniNode(PTR, $2), $7), $2)))); ncicl--; }
+	| FOR lv IN expr DOWNTO expr step DO { ncicl++; } stmt       { $$ = binNode(';', binNode(ATR, $4, $2), binNode(FOR, binNode(IN, nilNode(START), binNode(GE, uniNode(PTR, $2), $6)), binNode(';', $10, binNode(ATR, binNode('-', uniNode(PTR, $2), $7), $2)))); ncicl--; }
+	| IF expr THEN stmt %prec IFX    { $$ = binNode(IF, $2, $4); }
+	| IF expr THEN stmt ELSE stmt    { $$ = binNode(ELSE, binNode(IF, $2, $4), $6); }
+	| expr ';'              { $$ = $1; }
+	| bloco                 { $$ = $1; }
+	| lv '#' expr ';'       { $$ = binNode('#', $3, $1); }
+	| error ';'       { $$ = nilNode(NIL); }
+	;
+
+end	:		{ $$ = 0; }
+	| brk;
+
+brk : BREAK intp ';'        { $$ = intNode(BREAK, $2); if ($2 <= 0 || $2 > ncicl) yyerror("invalid break argument"); }
+	| CONTINUE intp ';'     { $$ = intNode(CONTINUE, $2); if ($2 <= 0 || $2 > ncicl) yyerror("invalid continue argument"); }
+	;
+
+step	:               { $$ = intNode(INT, 1); }
+	| STEP expr     { $$ = $2; }
+	;
+
+intp	:       { $$ = 1; }
+	| INT
+	;
+
+list	: base
+	| list base     { $$ = binNode(';', $1, $2); }
+	;
+
+args	: expr		{ $$ = binNode(',', nilNode(NIL), $1); }
+	| args ',' expr { $$ = binNode(',', $1, $3); }
+	;
+
+lv	: ID		{ long pos; int typ = IDfind($1, &pos);
+                          if (pos == 0) $$ = strNode(ID, $1);
+                          else $$ = intNode(LOCAL, pos);
+			  $$->info = typ;
+			}
+	| ID '[' expr ']' { Node *n;
+                            long pos; int siz, typ = IDfind($1, &pos);
+                            if (typ / 10 != 1 && typ % 5 != 2) yyerror("not a pointer");
+                            if (pos == 0) n = strNode(ID, $1);
+                            else n = intNode(LOCAL, pos);
+                            $$ = binNode('[', n, $3);
+			    if (typ >= 10) typ -= 10;
+                            else if (typ % 5 == 2) typ = 1;
+			    if (typ >= 5) typ -= 5;
+			    $$->info = typ;
+			  }
+	;
+
+expr	: lv		{ $$ = uniNode(PTR, $1); $$->info = $1->info; }
+	| '*' lv        { $$ = uniNode(PTR, uniNode(PTR, $2)); if ($2->info % 5 == 2) $$->info = 1; else if ($2->info / 10 == 1) $$->info = $2->info % 10; else yyerror("can dereference lvalue"); }
+	| lv ATR expr   { $$ = binNode(ATR, $3, $1); if ($$->info % 10 > 5) yyerror("constant value to assignment"); if (noassign($1, $3)) yyerror("illegal assignment"); $$->info = $1->info; }
+	| INT           { $$ = intNode(INT, $1); $$->info = 1; }
+	| STR           { $$ = strNode(STR, $1); $$->info = 2; }
+	| REAL          { $$ = realNode(REAL, $1); $$->info = 3; }
+	| '-' expr %prec UMINUS { $$ = uniNode(UMINUS, $2); $$->info = $2->info; nostring($2, $2);}
+	| '~' expr %prec UMINUS { $$ = uniNode(NOT, $2); $$->info = intonly($2, 0); }
+	| '&' lv %prec UMINUS   { $$ = uniNode(REF, $2); $$->info = $2->info + 10; }
+	| expr '!'             { $$ = uniNode('!', $1); $$->info = 3; intonly($1, 0); }
+	| INCR lv       { $$ = uniNode(INCR, $2); $$->info = intonly($2, 1); }
+	| DECR lv       { $$ = uniNode(DECR, $2); $$->info = intonly($2, 1); }
+	| lv INCR       { $$ = uniNode(POSINC, $1); $$->info = intonly($1, 1); }
+	| lv DECR       { $$ = uniNode(POSDEC, $1); $$->info = intonly($1, 1); }
+	| expr '+' expr { $$ = binNode('+', $1, $3); $$->info = nostring($1, $3); }
+	| expr '-' expr { $$ = binNode('-', $1, $3); $$->info = nostring($1, $3); }
+	| expr '*' expr { $$ = binNode('*', $1, $3); $$->info = nostring($1, $3); }
+	| expr '/' expr { $$ = binNode('/', $1, $3); $$->info = nostring($1, $3); }
+	| expr '%' expr { $$ = binNode('%', $1, $3); $$->info = intonly($1, 0); intonly($3, 0); }
+	| expr '<' expr { $$ = binNode('<', $1, $3); $$->info = 1; }
+	| expr '>' expr { $$ = binNode('>', $1, $3); $$->info = 1; }
+	| expr GE expr  { $$ = binNode(GE, $1, $3); $$->info = 1; }
+	| expr LE expr  { $$ = binNode(LE, $1, $3); $$->info = 1; }
+	| expr NE expr  { $$ = binNode(NE, $1, $3); $$->info = 1; }
+	| expr '=' expr { $$ = binNode('=', $1, $3); $$->info = 1; }
+	| expr '&' expr { $$ = binNode('&', $1, $3); $$->info = intonly($1, 0); intonly($3, 0); }
+	| expr '|' expr { $$ = binNode('|', $1, $3); $$->info = intonly($1, 0); intonly($3, 0); }
+	| '(' expr ')' { $$ = $2; $$->info = $2->info; }
+	| ID '(' args ')' { $$ = binNode(CALL, strNode(ID, $1), $3);
+                            $$->info = checkargs($1, $3); }
+	| ID '(' ')'    { $$ = binNode(CALL, strNode(ID, $1), nilNode(VOID));
+                          $$->info = checkargs($1, 0); }
+	;
 
 %%
-
-static void declareVar(Node *typ, char* id, Node *init) {
-
-	if (typ->info == VOID) {
-		sprintf(buf, "Variable %s cannot be of type VOID\n", id);
-		yyerror(buf);
-		return;
-	}
-	IDnew(OP_LABEL(typ), id, 0);
-	if (init != 0 && init->info != 0 && OP_LABEL(typ) != init->info) {
-		sprintf(buf, "Error assigning value to %s: Incompatible types.\n", id);
-		yyerror(buf);
-	}
-}
-
-static void declareFunc(Node *typ, char* id, Node* pars) {
-	int type = 1000 + typ->info; /*type of function is 1000 + return type*/
-	funcAttribs f = (funcAttribs) malloc(sizeof(struct fattrib));
-	f->attribNum = 0;
-	Node *aux;
-	for (aux = pars; OP_LABEL(aux) != NIL; aux = LEFT_CHILD(aux)) {
-		f->attribNum++;
-	}
-	f->attribNames = (char**) malloc(f->attribNum*sizeof(char*));
-	f->attribTypes = (int*) malloc(f->attribNum*sizeof(int));
-	f->attribNum = 0; /*lets use attribNum as index*/
-	for (aux = pars; OP_LABEL(aux) != NIL; aux = LEFT_CHILD(aux)) {
-		f->attribNames[f->attribNum] = RIGHT_CHILD(RIGHT_CHILD(aux))->value.s;
-		f->attribTypes[f->attribNum] = LEFT_CHILD(RIGHT_CHILD(aux))->info;
-		f->attribNum++;
-	}
-	IDnew(type, id, (long) f);
-}
-
-
-static int callFunc(char* name, Node *args) {
-	/*when a function is called we need to check if it exists and the number and type of the arguments*/
-	long f;
-	int type = IDfind(name, &f) - 1000; /*we take 1000 to get the return type*/
-	funcAttribs attr = (funcAttribs) f;
-	int atNum = 0, i = 0;
-	Node *aux;
-	if (args != 0) {
-		for (aux = args; OP_LABEL(aux) != NIL; aux = LEFT_CHILD(aux)) {
-			atNum++;
-		}
-	}
-	if (atNum != attr->attribNum) {
-		sprintf(buf, "Error: Invalid number of arguments on call to function %s (expect %d, got %d\n", name, attr->attribNum, atNum);
-		yyerror(buf);
-	}
-	if (args != 0) {
-		for (aux = args; OP_LABEL(aux) != NIL; aux = LEFT_CHILD(aux)) {
-			if (RIGHT_CHILD(aux)->info != attr->attribTypes[i]) {
-				sprintf(buf, "Error: Invalid type of argument on call to function %s on position %d\n", name, i);
-				yyerror(buf);
-			}
-		}
-	}
-	return type;
-}
-
-static void initFuncBody(char *funcName) {
-	long fp;
-	int typ = IDfind(funcName, &fp);
-	funcAttribs attr = (funcAttribs) fp;
-	int i;
-	for (i=0; i< attr->attribNum; i++) {
-		IDnew(attr->attribTypes[i], attr->attribNames[i], 0);
-	}
-}
-
-static int usePtr(char *id) {
-	int type = IDfind(id, 0);
-	if (type > 1000 || type == INTEGER || type == NUMBER || type == ZERO ) {
-		sprintf(buf, "Error: %s is not a pointer.\n", id);
-		yyerror(buf);
-	}
-	if (type == STRING || type == INTEGERP) 
-		return INTEGER;
-	if (type == STRINGP)
-		return STRING;
-	if (type == NUMBERP)
-		return NUMBER;
-	return 0;
-}
-
-static int getMem(int type) {
-	if (type == INTEGERP || type == NUMBERP || type == STRINGP || type == VOID) {
-		yyerror("Cannot make pointer out of pointer or void (& opperand).");
-	}
-	if (type == STRING)
-		return STRINGP;
-	if (type == NUMBER)
-		return NUMBERP;
-	if (type == INTEGER || type == ZERO)
-		return INTEGERP;
-	return 0;
-}
-
-static int indexVar(int type, int ptr) { 
-	if (ptr != INTEGER && ptr != ZERO) {
-		sprintf(buf, "Error: Invalid index value (not an integer).\n");
-		yyerror(buf);
-	}
-
-	if (type > 1000 || type == INTEGER || type == NUMBER || type == ZERO) {
-		sprintf(buf, "Error: Unable to index (not a pointer or string).\n");
-		yyerror(buf);
-	}
-
-	if (type == STRING || type == INTEGERP) 
-		return INTEGER;
-	if (type == STRINGP)
-		return STRING;
-	if (type == NUMBERP)
-		return NUMBER;
-	return 0;
-}
-
-static int checkBinIntNum(int t1, int t2, char* opp) {
-
-	if (t1%1000 == STRING || t1%1000 == STRINGP || t1 == VOID || t2%1000 == STRING || t2%1000 == STRINGP || t2 == VOID ) {
-		sprintf(buf, "Invalid type for opperand %s.\n", opp);
-		yyerror(buf);
-	}
-	if (t1%1000 == NUMBER || t2%1000 == NUMBER)
-		return NUMBER;
-	return t1;
-}
-
-static int checkBinIntNumStr(int t1, int t2, char* opp) {
-	if (t1 %1000 != t2%1000) {
-		if (t1 %1000 != NUMBER || t2%1000 != INTEGER) {
-			if (t1 %1000 != INTEGER || t2%1000 != NUMBER) {
-				if (t1 %1000 != NUMBER || t2%1000 != ZERO) {
-					if (t1 %1000 != INTEGER || t2%1000 != ZERO) {
-						if (t1 %1000 != ZERO || t2%1000 != INTEGER) {
-							if (t1 %1000 != ZERO || t2%1000 != NUMBER) {
-								if (t1 %1000 != STRING || t2%1000 != ZERO) {
-									if (t1 %1000 != ZERO || t2%1000 != STRING) {
-										sprintf(buf, "Incompatible types for opperand %s (types not equal).\n", opp);
-										yyerror(buf);
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if (t1%1000 != INTEGER && t1%1000 != NUMBER && t1%1000 != STRING && t1%1000 != ZERO) {
-		sprintf(buf, "Invalid type for opperand %s.\n", opp);
-		yyerror(buf);
-	}
-	return INTEGER;
-}
-
-static int checkAtr(int t1, int t2) {
-	if (t1 % 1000 != t2 % 1000 && (t1%1000 != NUMBER || t2%1000 != INTEGER) && (t2 != ZERO || t1%1000 != INTEGER) && (t2 != ZERO || t1%1000 != NUMBER)  && (t1%1000 != INTEGER || t2 != ZERO) && (t1%1000 != NUMBER || t2 != ZERO) && (t1%1000 != STRING || t2 != ZERO))
-	 	if ((t1%1000 != STRINGP || t2 != ZERO) && (t1%1000 != NUMBERP || t2 != ZERO) && (t1%1000 != INTEGERP || t2 != ZERO)) { /*we can make a pointer equal 0*/
-	 		if (t1%1000 != STRING || t2 != INTEGERP) /*since str[x]=int, we need to allow cast of integerp to string*/
-	 			yyerror("Invalid types for opperand ':='");
-	 	}
-	return t1;
-}
-
-
-
-
 char **yynames =
 #if YYDEBUG > 0
 		 (char**)yyname;
@@ -378,5 +207,103 @@ char **yynames =
 		 0;
 #endif
 
+void declare(int pub, int cnst, Node *type, char *name, Node *value)
+{
+  int typ;
+  if (!value) {
+    if (!pub && cnst) yyerror("local constants must be initialised");
+    return;
+  }
+  if (value->attrib = INT && value->value.i == 0 && type->value.i > 10)
+  	return; /* NULL pointer */
+  if ((typ = value->info) % 10 > 5) typ -= 5;
+  if (type->value.i != typ)
+    yyerror("wrong types in initialization");
+}
+void enter(int pub, int typ, char *name) {
+	fpar = malloc(32); /* 31 arguments, at most */
+	fpar[0] = 0; /* argument count */
+	if (IDfind(name, (long*)IDtest) < 20)
+		IDnew(typ+20, name, (long)fpar);
+	IDpush();
+	if (typ != 4) IDnew(typ, name, 0);
+}
 
+int checkargs(char *name, Node *args) {
+	char *arg;
+	int typ;
+        if ((typ = IDsearch(name, (long*)&arg,IDlevel(),1)) < 20) {
+		yyerror("ident not a function");
+		return 0;
+	}
+	if (args == 0 && arg[0] == 0)
+		;
+	else if (args == 0 && arg[0] != 0)
+		yyerror("function requires no arguments");
+	else if (args != 0 && arg[0] == 0)
+		yyerror("function requires arguments");
+	else {
+		int err = 0, null, i = arg[0], typ;
+		do {
+			Node *n;
+			if (i == 0) {
+				yyerror("too many arguments.");
+				err = 1;
+				break;
+			}
+			n = RIGHT_CHILD(args);
+			typ = n->info;
+			if (typ % 10 > 5) typ -= 5; /* remove CONST */
+			null =  (n->attrib == INT && n->value.i == 0 && arg[i] > 10) ? 1 : 0;
+			if (!null && arg[i] != typ) {
+				yyerror("wrong argument type");
+				err = 1;
+				break;
+			}
+			args = LEFT_CHILD(args);
+			i--;
+		} while (args->attrib != NIL);
+		if (!err && i > 0)
+			yyerror("missing arguments");
+	}
+	return typ % 20;
+}
 
+int nostring(Node *arg1, Node *arg2) {
+	if (arg1->info % 5 == 2 || arg2->info % 5 == 2)
+		yyerror("can not use strings");
+	return arg1->info % 5 == 3 || arg2->info % 5 == 3 ? 3 : 1;
+}
+
+int intonly(Node *arg, int novar) {
+	if (arg->info % 5 != 1)
+		yyerror("only integers can be used");
+	if (arg->info % 10 > 5)
+		yyerror("argument is constant");
+	return 1;
+}
+
+int noassign(Node *arg1, Node *arg2) {
+	int t1 = arg1->info, t2 = arg2->info;
+	if (t1 == t2) return 0;
+	if (t1 == 3 && t2 == 1) return 0; /* real := int */
+	if (t1 == 1 && t2 == 3) return 0; /* int := real */
+	if (t1 == 2 && t2 == 11) return 0; /* string := int* */
+	if (t1 == 2 && arg2->attrib == INT && arg2->value.i == 0)
+		return 0; /* string := 0 */
+	if (t1 > 10 && t1 < 20 && arg2->attrib == INT && arg2->value.i == 0)
+		return 0; /* pointer := 0 */
+	return 1;
+}
+
+void function(int pub, Node *type, char *name, Node *body)
+{
+	Node *bloco = LEFT_CHILD(body);
+	IDpop();
+	if (bloco != 0) { /* not a forward declaration */
+		long par;
+		int fwd = IDfind(name, &par);
+		if (fwd > 40) yyerror("duplicate function");
+		else IDreplace(fwd+40, name, par);
+	}
+}
