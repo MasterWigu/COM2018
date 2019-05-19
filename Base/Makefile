@@ -1,4 +1,3 @@
-    
 LANG=diy
 EXT=diy # file extension: .$(EXT)
 LIB=lib # compiler library directory

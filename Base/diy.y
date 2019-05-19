@@ -8,12 +8,14 @@
 #include "tabid.h"
 
 extern int yylex();
+
 void yyerror(char *s);
+void variable(char*,Node*,Node*), function(char*,int,Node*, int tVoid), externs();
 void declare(int pub, int cnst, Node *type, char *name, Node *value);
 void enter(int pub, int typ, char *name);
 int checkargs(char *name, Node *args);
 int nostring(Node *arg1, Node *arg2);
-int intonly(Node *arg, int);
+int intonly(Node *arg, int, int);
 int noassign(Node *arg1, Node *arg2);
 static int ncicl;
 static char *fpar;
@@ -51,14 +53,17 @@ static char *fpar;
 
 %token LOCAL POSINC POSDEC PTR CALL START PARAM NIL
 %%
+master:	file					{ externs();}
+	;
+
 file	:
 	| file error ';'
 	| file public tipo ID ';'	{ IDnew($3->value.i, $4, 0); declare($2, 0, $3, $4, 0); }
 	| file public CONST tipo ID ';'	{ IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, 0); }
 	| file public tipo ID init	{ IDnew($3->value.i, $4, 0); declare($2, 0, $3, $4, $5); }
 	| file public CONST tipo ID init	{ IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, $6); }
-	| file public tipo ID { enter($2, $3->value.i, $4); } finit { function($2, $3, $4, $6); }
-	| file public VOID ID { enter($2, 4, $4); } finit { function($2, intNode(VOID, 4), $4, $6); }
+	| file public tipo ID { enter($2, $3->value.i, $4); } finit { crFunction($2, $3, $4, $6); function($4, 4, LEFT_CHILD($6), 0); }
+	| file public VOID ID { enter($2, 4, $4); } finit { crFunction($2, intNode(VOID, 4), $4, $6); function($4, 0, LEFT_CHILD($6), 1); }
 	;
 
 public	:               { $$ = 0; }
@@ -84,10 +89,10 @@ init	: ATR ID ';'		{ $$ = strNode(ID, $2); $$->info = IDfind($2, 0) + 10; }
         ;
 
 finit   : '(' params ')' blocop { $$ = binNode('(', $4, $2); }
-	| '(' ')' blocop        { $$ = binNode('(', $3, 0); }
+	| '(' ')' blocop        { $$ = binNode('(', $3, nilNode(NIL)); }
 	;
 
-blocop  : ';'   { $$ = 0; }
+blocop  : ';'   { $$ = nilNode(NIL); }
         | bloco ';'   { $$ = $1; }
         ;
 
@@ -98,7 +103,7 @@ params	: param
 bloco	: '{' { IDpush(); } decls list end '}'    { $$ = binNode('{', $5 ? binNode(';', $4, $5) : $4, $3); IDpop(); }
 	;
 
-decls	:                       { $$ = 0; }
+decls	:                       { $$ = nilNode(NIL); }
 	| decls param ';'       { $$ = binNode(';', $1, $2); }
 	;
 
@@ -139,7 +144,7 @@ intp	:       { $$ = 1; }
 	| INT
 	;
 
-list	: base
+list	: base		{ $$ = binNode(';', nilNode(NIL), $1); }
 	| list base     { $$ = binNode(';', $1, $2); }
 	;
 
@@ -172,26 +177,26 @@ expr	: lv		{ $$ = uniNode(PTR, $1); $$->info = $1->info; }
 	| STR           { $$ = strNode(STR, $1); $$->info = 2; }
 	| REAL          { $$ = realNode(REAL, $1); $$->info = 3; }
 	| '-' expr %prec UMINUS { $$ = uniNode(UMINUS, $2); $$->info = $2->info; nostring($2, $2);}
-	| '~' expr %prec UMINUS { $$ = uniNode(NOT, $2); $$->info = intonly($2, 0); }
+	| '~' expr %prec UMINUS { $$ = uniNode(NOT, $2); $$->info = intonly($2, 0, 0); }
 	| '&' lv %prec UMINUS   { $$ = uniNode(REF, $2); $$->info = $2->info + 10; }
-	| expr '!'             { $$ = uniNode('!', $1); $$->info = 3; intonly($1, 0); }
-	| INCR lv       { $$ = uniNode(INCR, $2); $$->info = intonly($2, 1); }
-	| DECR lv       { $$ = uniNode(DECR, $2); $$->info = intonly($2, 1); }
-	| lv INCR       { $$ = uniNode(POSINC, $1); $$->info = intonly($1, 1); }
-	| lv DECR       { $$ = uniNode(POSDEC, $1); $$->info = intonly($1, 1); }
+	| expr '!'             { $$ = uniNode('!', $1); $$->info = 3; intonly($1, 0, 0); }
+	| INCR lv       { $$ = uniNode(INCR, $2); $$->info = intonly($2, 1, 1); }
+	| DECR lv       { $$ = uniNode(DECR, $2); $$->info = intonly($2, 1, 1); }
+	| lv INCR       { $$ = uniNode(POSINC, $1); $$->info = intonly($1, 1, 1); }
+	| lv DECR       { $$ = uniNode(POSDEC, $1); $$->info = intonly($1, 1, 1); }
 	| expr '+' expr { $$ = binNode('+', $1, $3); $$->info = nostring($1, $3); }
 	| expr '-' expr { $$ = binNode('-', $1, $3); $$->info = nostring($1, $3); }
 	| expr '*' expr { $$ = binNode('*', $1, $3); $$->info = nostring($1, $3); }
 	| expr '/' expr { $$ = binNode('/', $1, $3); $$->info = nostring($1, $3); }
-	| expr '%' expr { $$ = binNode('%', $1, $3); $$->info = intonly($1, 0); intonly($3, 0); }
+	| expr '%' expr { $$ = binNode('%', $1, $3); $$->info = intonly($1, 0, 0); intonly($3, 0, 0); }
 	| expr '<' expr { $$ = binNode('<', $1, $3); $$->info = 1; }
 	| expr '>' expr { $$ = binNode('>', $1, $3); $$->info = 1; }
 	| expr GE expr  { $$ = binNode(GE, $1, $3); $$->info = 1; }
 	| expr LE expr  { $$ = binNode(LE, $1, $3); $$->info = 1; }
 	| expr NE expr  { $$ = binNode(NE, $1, $3); $$->info = 1; }
 	| expr '=' expr { $$ = binNode('=', $1, $3); $$->info = 1; }
-	| expr '&' expr { $$ = binNode('&', $1, $3); $$->info = intonly($1, 0); intonly($3, 0); }
-	| expr '|' expr { $$ = binNode('|', $1, $3); $$->info = intonly($1, 0); intonly($3, 0); }
+	| expr '&' expr { $$ = binNode('&', $1, $3); $$->info = intonly($1, 0, 0); intonly($3, 0, 0); }
+	| expr '|' expr { $$ = binNode('|', $1, $3); $$->info = intonly($1, 0, 0); intonly($3, 0, 0); }
 	| '(' expr ')' { $$ = $2; $$->info = $2->info; }
 	| ID '(' args ')' { $$ = binNode(CALL, strNode(ID, $1), $3);
                             $$->info = checkargs($1, $3); }
@@ -226,7 +231,7 @@ void enter(int pub, int typ, char *name) {
 	if (IDfind(name, (long*)IDtest) < 20)
 		IDnew(typ+20, name, (long)fpar);
 	IDpush();
-	if (typ != 4) IDnew(typ, name, 0);
+	if (typ != 4) IDnew(typ, name, -4);
 }
 
 int checkargs(char *name, Node *args) {
@@ -275,10 +280,10 @@ int nostring(Node *arg1, Node *arg2) {
 	return arg1->info % 5 == 3 || arg2->info % 5 == 3 ? 3 : 1;
 }
 
-int intonly(Node *arg, int novar) {
+int intonly(Node *arg, int novar, int atr) {
 	if (arg->info % 5 != 1)
 		yyerror("only integers can be used");
-	if (arg->info % 10 > 5)
+	if (arg->info % 10 > 5 && atr)
 		yyerror("argument is constant");
 	return 1;
 }
@@ -296,7 +301,7 @@ int noassign(Node *arg1, Node *arg2) {
 	return 1;
 }
 
-void function(int pub, Node *type, char *name, Node *body)
+void crFunction(int pub, Node *type, char *name, Node *body)
 {
 	Node *bloco = LEFT_CHILD(body);
 	IDpop();
