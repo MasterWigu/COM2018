@@ -1,5 +1,6 @@
 public void prints(string s)
+public string x := "olá pessoal!";
 public integer entry (integer argc, string *argv, string *envp) {
-  prints("olá pessoal!")
+  prints(x)
   entry := 0
 };
