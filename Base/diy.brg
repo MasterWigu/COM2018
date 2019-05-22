@@ -39,6 +39,7 @@ static int doasm(Node *p) { return strcmp(LEFT_CHILD(LEFT_CHILD(p))->value.s, "a
 %}
 %include "y.tab.h"
 %term SC=';' COMMA=',' BLK='{' PMS='('
+%term ADD='+' SUB='-' MUL='*' DIV='/' MOD='%' GT='>' LT='<' EQ='=' OR='|' AND='&' FACT='!' 
 %%
 
 
@@ -78,9 +79,29 @@ expr:	PTR(lvalue)					1 { fprintf(outfp, pfLOAD); }
 expr:	REF(lvalue)	  				{ /* No code, but keep PTR to avoid missing LOADs */ }
 
 expr:	INT							1 { fprintf(outfp, pfIMM, p->value.i); }
+expr:	REAL						1 { fprintf(outfp, pfIMM, p->value.i); }
 expr:	STR 						1 { lbl++; fprintf(outfp, pfRODATA pfALIGN pfLABEL, mklbl(lbl)); outstr(p->value.s); fprintf(outfp, pfTEXT pfADDR, mklbl(lbl)); }
 expr:	CALL(ID, args)				1 { fprintf(outfp, pfCALL pfTRASH pfPUSH, mkfunc(LEFT_CHILD(p)->value.s), (int)(pfWORD*(RIGHT_CHILD(p)->place))); }
 
+expr:	ADD(expr,expr)				1 { fprintf(outfp, pfADD); }
+expr:	SUB(expr,expr)				1 { fprintf(outfp, pfSUB); }
+expr:	MUL(expr,expr)				1 { fprintf(outfp, pfMUL); }
+expr:	DIV(expr,expr)				1 { fprintf(outfp, pfDIV); }
+expr:	MOD(expr,expr)				1 { fprintf(outfp, pfMOD); }
+expr:	OR(expr,expr)				1 { fprintf(outfp, pfOR); }
+%!expr:	AND(expr,expr)				1 { fprintf(outfp, pfAND); }
+expr:	EQ(expr,expr)				1 { fprintf(outfp, pfEQ); }
+expr:	NE(expr,expr)				1 { fprintf(outfp, pfNE); }
+expr:	LT(expr,expr)				1 { fprintf(outfp, pfLT); }
+expr:	LE(expr,expr)				1 { fprintf(outfp, pfLE); }
+expr:	GT(expr,expr)				1 { fprintf(outfp, pfGT); }
+expr:	GE(expr,expr)				1 { fprintf(outfp, pfGE); }
+expr:	UMINUS(expr)				1 { fprintf(outfp, pfNEG); }
+expr:	NOT(expr)					1 { fprintf(outfp, pfIMM pfEQ, 0); }
+expr:	AND(and,expr)	1 { fprintf(outfp, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
+and:	expr		1 { p->place = ++lbl; fprintf(outfp, pfDUP pfJZ pfTRASH, mklbl(p->place), pfWORD); }
+expr:	OR(or,expr)	1 { fprintf(outfp, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
+or: expr 1 { p->place = ++lbl; fprintf(outfp, pfDUP pfJNZ pfTRASH, mklbl(p->place), pfWORD); }
 
 
 
@@ -124,16 +145,16 @@ void variable(char *name, Node *type, Node *init, int cnst) {
 				break;
 			case 2: { 
 				char *l = mklbl(++lbl);
-				fprintf(outfp, pfRODATA pfALIGN pfLABEL, l);
+				fprintf(outfp, pfID, l);
+				fprintf(outfp, pfDATA pfALIGN pfLABEL, l);
 				outstr(init->value.s);
-				fprintf(outfp, pfDATA pfID, l);
 				break;
 			} 
 			case 7: { 
 				char *l = mklbl(++lbl);
+				fprintf(outfp, pfID, l);
 				fprintf(outfp, pfRODATA pfALIGN pfLABEL, l);
 				outstr(init->value.s);
-				fprintf(outfp, pfDATA pfID, l);
 				break;
 			}
 			default:

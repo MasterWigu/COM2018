@@ -1,5 +1,5 @@
 
-#line 3 "lex.yy.c"
+#line 2 "lex.yy.c"
 
 #define  YY_INT_ALIGNED short int
 
@@ -613,9 +613,9 @@ static int ncom; /* comment nesting level */
 static int in; /* in string */
 void yyerror(char *s);
 int octal(char *s);
-#line 617 "lex.yy.c"
+#line 616 "lex.yy.c"
 
-#line 619 "lex.yy.c"
+#line 618 "lex.yy.c"
 
 #define INITIAL 0
 #define COM 1
@@ -842,7 +842,7 @@ YY_DECL
 	{
 #line 16 "diy.l"
 
-#line 846 "lex.yy.c"
+#line 845 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -1174,7 +1174,7 @@ YY_RULE_SETUP
 #line 71 "diy.l"
 ECHO;
 	YY_BREAK
-#line 1178 "lex.yy.c"
+#line 1177 "lex.yy.c"
 			case YY_STATE_EOF(INITIAL):
 			case YY_STATE_EOF(COM):
 			case YY_STATE_EOF(CHR):

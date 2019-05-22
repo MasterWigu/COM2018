@@ -1,7 +1,6 @@
-public void prints(string s)
-public string x := "aaaaaaba"
+public void printd(number s)
+public number x;
 public integer entry (integer argc, string *argv, string *envp) {
-  prints("olá pessoal!\n")
-  x := "c";
+  3 & 2;
   entry := 0
 };
