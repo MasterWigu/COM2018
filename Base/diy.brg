@@ -51,6 +51,7 @@ list:	SC(list, base)
 base:	expr						1 { fprintf(outfp, pfTRASH, pfWORD); }
 
 args:	NIL							{ p->place = 0; }
+args:	VOID							{ p->place = 0; }
 args:	COMMA(args, expr)			{ p->place =  ((LEFT_CHILD(p)->place) + 1); }
 
 
@@ -58,10 +59,10 @@ lvalue:	ID							1 { fprintf(outfp, pfADDR, p->value.s); }
 lvalue: LOCAL						1 { fprintf(outfp, pfLOCAL, p->value.i * (pfWORD/4)); }
 expr:	PTR(lvalue)					1 { fprintf(outfp, pfLOAD); }
 expr:	REF(lvalue)	  				{ /* No code, but keep PTR to avoid missing LOADs */ }
-lvec:	lval						1 { fprintf(outfp, pfLOAD); }
-lval:	INDEX(lvec,expr) 			1 { fprintf(outfp, pfIMM pfMUL pfADD, pfWORD); }
-lval:	PTR(lval)					1 { fprintf(outfp, pfLOAD); }
-expr:	PTR(lval)					1 { fprintf(outfp, pfLOAD); }
+lvec:	lvalue						1 { fprintf(outfp, pfLOAD); }
+lvalue:	INDEX(lvec,expr) 			1 { fprintf(outfp, pfIMM pfMUL pfADD, pfWORD); }
+lvalue:	PTR(lvalue)					1 { fprintf(outfp, pfLOAD); }
+expr:	PTR(lvalue)					1 { fprintf(outfp, pfLOAD); }
 
 
 expr:	ATR(expr,LOCAL)				1 { fprintf(outfp, pfDUP pfLOCA, RIGHT_CHILD(p)->value.i * (pfWORD/4)); }
@@ -69,7 +70,7 @@ expr:	ATR(expr,ID)				1 { fprintf(outfp, pfDUP pfADDRA, RIGHT_CHILD(p)->value.s)
 assign: expr						1 { fprintf(outfp, pfDUP); }
 expr:	ATR(assign,lvalue)			1 { fprintf(outfp, pfSTORE); }
 expr:	ID						1 { fprintf(outfp, pfADDRV, p->value.s); }
-base:	ALLOC(alloc,lval)  			1 { fprintf(outfp, pfSTORE); }
+base:	ALLOC(alloc,lvalue)  			1 { fprintf(outfp, pfSTORE); }
 alloc:	expr						1 { fprintf(outfp, pfIMM pfMUL pfALLOC pfSP, pfWORD); }
 
 
@@ -100,12 +101,21 @@ or: expr							1 { p->place = ++lbl; fprintf(outfp, pfDUP pfJNZ pfTRASH, mklbl(p
 
 
 
+%! if-else
+base:	ELSE(if,base)				1 { fprintf(outfp, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
+if:		IF(cond,base)				1 { p->place = ++lbl; fprintf(outfp, pfJMP pfLABEL, mklbl(p->place), mklbl(LEFT_CHILD(p)->place)); }
+%! simple if (no else): uses only one label
+base:	IF(cond,base)				1 { fprintf(outfp, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
+cond:	expr						1 { p->place = ++lbl; fprintf(outfp, pfJZ, mklbl(p->place)); }
 
 
-expr:	INCR(lval)					1 { fprintf(outfp, pfDUP pfINCR pfLOAD, 1); }
-expr:	DECR(lval)					1 { fprintf(outfp, pfDUP pfDECR pfLOAD, 1); }
-expr:	POSINC(lval)				1 { fprintf(outfp, pfDUP pfLOAD pfSWAP pfINCR, 1); }
-expr:	POSDEC(lval)				1 { fprintf(outfp, pfDUP pfLOAD pfSWAP pfDECR, 1); }
+
+
+
+expr:	INCR(lvalue)					1 { fprintf(outfp, pfDUP pfINCR pfLOAD, 1); }
+expr:	DECR(lvalue)					1 { fprintf(outfp, pfDUP pfDECR pfLOAD, 1); }
+expr:	POSINC(lvalue)				1 { fprintf(outfp, pfDUP pfLOAD pfSWAP pfINCR, 1); }
+expr:	POSDEC(lvalue)				1 { fprintf(outfp, pfDUP pfLOAD pfSWAP pfDECR, 1); }
 
 
 

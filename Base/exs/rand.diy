@@ -1,3 +1,5 @@
+public void printi(integer s)
+public void prints(string s)
 integer seed := 100003
 const integer mod := 1000000
 public void srand(integer s) { 
@@ -7,4 +9,15 @@ public void srand(integer s) {
 
 public integer rand() {
 	rand := seed := (seed * 27983 + 149) % mod;
+};
+
+
+public integer entry (integer argc, string *argv, string *envp) {
+  printi(rand())
+  prints("\n")
+  printi(rand())
+  prints("\n")
+  printi(rand())
+  prints("\n")
+  entry := 0
 };
