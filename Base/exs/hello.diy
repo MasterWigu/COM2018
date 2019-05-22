@@ -1,6 +1,4 @@
 public void printd(number s)
-public number x;
 public integer entry (integer argc, string *argv, string *envp) {
-  3 & 2;
   entry := 0
 };

@@ -6,8 +6,18 @@ align	4
 $x:
 ; GLOBL
 global	$x:object
-; DOUBLE
-	dq	0.000000e+00
+; INTEGER
+	dd	0
+; DATA
+segment	.data
+; ALIGN
+align	4
+; LABEL
+$y:
+; GLOBL
+global	$y:object
+; INTEGER
+	dd	0
 ; TEXT
 segment	.text
 ; ALIGN
@@ -19,21 +29,62 @@ $_entry:
 ; ENTER
 	push	ebp
 	mov	ebp, esp
-	sub	esp, 4
+	sub	esp, 16
 ; IMM
-	push	dword 3
+	push	dword 20
 ; COPY
 	push	dword [esp]
-; JZ
+; LOCA
 	pop	eax
-	cmp	eax, byte 0
-	je	near $_i1
+	mov	[ebp+-16], eax
 ; TRASH
 	add	esp, 4
-; IMM
-	push	dword 2
+; RODATA
+segment	.rodata
+; ALIGN
+align	4
 ; LABEL
 $_i1:
+; CHAR
+	db	0x6F
+; CHAR
+	db	0x6C
+; CHAR
+	db	0xC3
+; CHAR
+	db	0xA1
+; CHAR
+	db	0x20
+; CHAR
+	db	0x70
+; CHAR
+	db	0x65
+; CHAR
+	db	0x73
+; CHAR
+	db	0x73
+; CHAR
+	db	0x6F
+; CHAR
+	db	0x61
+; CHAR
+	db	0x6C
+; CHAR
+	db	0x21
+; CHAR
+	db	0x0A
+; CHAR
+	db	0x00
+; TEXT
+segment	.text
+; ADDR
+	push	dword $_i1
+; CALL
+	call	$_prints
+; TRASH
+	add	esp, 4
+; PUSH
+	push	eax
 ; TRASH
 	add	esp, 4
 ; IMM
@@ -54,4 +105,4 @@ $_i1:
 ; RET
 	ret
 ; EXTRN
-extern	$_printd
+extern	$_prints

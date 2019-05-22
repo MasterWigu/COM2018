@@ -40,22 +40,8 @@ static int doasm(Node *p) { return strcmp(LEFT_CHILD(LEFT_CHILD(p))->value.s, "a
 %include "y.tab.h"
 %term SC=';' COMMA=',' BLK='{' PMS='('
 %term ADD='+' SUB='-' MUL='*' DIV='/' MOD='%' GT='>' LT='<' EQ='=' OR='|' AND='&' FACT='!' 
+%term ALLOC='#' INDEX='['
 %%
-
-
-%!finit:	PMS(bloco, params)		1 {printf("TEST %d\n", 1);}
-%!blocop:	NIL
-%!blocop: bloco
-%!bloco:	BLK(list, decls)
-%!decls:	NIL
-%!decls:	SC(decls, base)			1 {printf("TEST %d\n", 3);}
-%!decls:	SC(decls, param)			1 {printf("TEST %d\n", 3);}
-%!params:	param 					1 {printf("TEST %d\n", 4);}
-%!params:	COMMA(params, param)	1 {printf("TEST %d\n", 5);}
-%!param:	PARAM(INTEGER, ID)				1 {printf("TEST %d\n", 6);}
-
-
-
 
 
 list:	NIL
@@ -70,13 +56,23 @@ args:	COMMA(args, expr)			{ p->place =  ((LEFT_CHILD(p)->place) + 1); }
 
 lvalue:	ID							1 { fprintf(outfp, pfADDR, p->value.s); }
 lvalue: LOCAL						1 { fprintf(outfp, pfLOCAL, p->value.i * (pfWORD/4)); }
+expr:	PTR(lvalue)					1 { fprintf(outfp, pfLOAD); }
+expr:	REF(lvalue)	  				{ /* No code, but keep PTR to avoid missing LOADs */ }
+lvec:	lval						1 { fprintf(outfp, pfLOAD); }
+lval:	INDEX(lvec,expr) 			1 { fprintf(outfp, pfIMM pfMUL pfADD, pfWORD); }
+lval:	PTR(lval)					1 { fprintf(outfp, pfLOAD); }
+expr:	PTR(lval)					1 { fprintf(outfp, pfLOAD); }
+
 
 expr:	ATR(expr,LOCAL)				1 { fprintf(outfp, pfDUP pfLOCA, RIGHT_CHILD(p)->value.i * (pfWORD/4)); }
 expr:	ATR(expr,ID)				1 { fprintf(outfp, pfDUP pfADDRA, RIGHT_CHILD(p)->value.s); }
 assign: expr						1 { fprintf(outfp, pfDUP); }
 expr:	ATR(assign,lvalue)			1 { fprintf(outfp, pfSTORE); }
-expr:	PTR(lvalue)					1 { fprintf(outfp, pfLOAD); }
-expr:	REF(lvalue)	  				{ /* No code, but keep PTR to avoid missing LOADs */ }
+expr:	ID						1 { fprintf(outfp, pfADDRV, p->value.s); }
+base:	ALLOC(alloc,lval)  			1 { fprintf(outfp, pfSTORE); }
+alloc:	expr						1 { fprintf(outfp, pfIMM pfMUL pfALLOC pfSP, pfWORD); }
+
+
 
 expr:	INT							1 { fprintf(outfp, pfIMM, p->value.i); }
 expr:	REAL						1 { fprintf(outfp, pfIMM, p->value.i); }
@@ -89,7 +85,6 @@ expr:	MUL(expr,expr)				1 { fprintf(outfp, pfMUL); }
 expr:	DIV(expr,expr)				1 { fprintf(outfp, pfDIV); }
 expr:	MOD(expr,expr)				1 { fprintf(outfp, pfMOD); }
 expr:	OR(expr,expr)				1 { fprintf(outfp, pfOR); }
-%!expr:	AND(expr,expr)				1 { fprintf(outfp, pfAND); }
 expr:	EQ(expr,expr)				1 { fprintf(outfp, pfEQ); }
 expr:	NE(expr,expr)				1 { fprintf(outfp, pfNE); }
 expr:	LT(expr,expr)				1 { fprintf(outfp, pfLT); }
@@ -98,13 +93,19 @@ expr:	GT(expr,expr)				1 { fprintf(outfp, pfGT); }
 expr:	GE(expr,expr)				1 { fprintf(outfp, pfGE); }
 expr:	UMINUS(expr)				1 { fprintf(outfp, pfNEG); }
 expr:	NOT(expr)					1 { fprintf(outfp, pfIMM pfEQ, 0); }
-expr:	AND(and,expr)	1 { fprintf(outfp, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
-and:	expr		1 { p->place = ++lbl; fprintf(outfp, pfDUP pfJZ pfTRASH, mklbl(p->place), pfWORD); }
-expr:	OR(or,expr)	1 { fprintf(outfp, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
-or: expr 1 { p->place = ++lbl; fprintf(outfp, pfDUP pfJNZ pfTRASH, mklbl(p->place), pfWORD); }
+expr:	AND(and,expr)				1 { fprintf(outfp, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
+and:	expr						1 { p->place = ++lbl; fprintf(outfp, pfDUP pfJZ pfTRASH, mklbl(p->place), pfWORD); }
+expr:	OR(or,expr)					1 { fprintf(outfp, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
+or: expr							1 { p->place = ++lbl; fprintf(outfp, pfDUP pfJNZ pfTRASH, mklbl(p->place), pfWORD); }
 
 
 
+
+
+expr:	INCR(lval)					1 { fprintf(outfp, pfDUP pfINCR pfLOAD, 1); }
+expr:	DECR(lval)					1 { fprintf(outfp, pfDUP pfDECR pfLOAD, 1); }
+expr:	POSINC(lval)				1 { fprintf(outfp, pfDUP pfLOAD pfSWAP pfINCR, 1); }
+expr:	POSDEC(lval)				1 { fprintf(outfp, pfDUP pfLOAD pfSWAP pfDECR, 1); }
 
 
 
