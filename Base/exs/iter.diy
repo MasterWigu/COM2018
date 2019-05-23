@@ -1,8 +1,30 @@
+public void printd(number s)
+public void prints(string s)
+
 == Computacao de factoriais de forma iterativa
 public number factorial(integer n) {
+	integer x;
     factorial := 1
     if n > 0 then
-        do
-            factorial := factorial * n
+        do {
+        	do {
+	        	number y;
+	        	integer x;
+	            factorial := factorial * n
+	            x := 0
+	            break 1
+	        }
+	        while 1
+        }
         while --n > 1
+};
+
+public integer entry (integer argc, string *argv, string *envp) {
+  printd(factorial(2))
+  prints("\n")
+  printd(factorial(5))
+  prints("\n")
+  printd(factorial(10))
+  prints("\n")
+  entry := 0
 };

@@ -105,12 +105,12 @@ bloco	: '{' { IDpush(); } decls list end '}'    { $$ = binNode('{', $5 ? binNode
 	;
 
 decls	:                       { $$ = nilNode(NIL); }
-	| decls param ';'       { $$ = binNode(';', $1, $2); /*variable(RIGHT_CHILD($2)->value.s, LEFT_CHILD($2),0,0);*/ }
+	| decls param ';'       { $$ = binNode(';', $1, $2);}
 	;
 
 param	: tipo ID               { $$ = binNode(PARAM, $1, strNode(ID, $2));
                                   if (IDlevel() == 1) {IDnew($1->value.i, $2, fpar[0]*4 + 8); fpar[++fpar[0]] = $1->value.i;}
-                                  if (IDlevel() == 2) {IDnew($1->value.i, $2, -bpar); bpar += $1->attrib == NUMBER ? 8 : 4;}
+                                  if (IDlevel() >= 2) {IDnew($1->value.i, $2, -bpar); bpar += $1->attrib == NUMBER ? 8 : 4;}
                                 }
 	;
 
@@ -236,7 +236,7 @@ void enter(int pub, int typ, char *name) {
 	IDpush();
 	if (typ != 4) {
 		IDnew(typ, name, -4); /*create local variable to return*/
-		bpar = 8;
+		bpar = typ==3 ? 12 : 8;
 	}
 	else bpar=4;
 }

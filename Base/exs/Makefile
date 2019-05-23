@@ -6,7 +6,7 @@ RUN=../run # runtime directory
 AS=nasm -felf32 # assembler command
 LD=ld -melf_i386 # loader command
 
-SRC=rand.diy
+SRC=ack.diy
 #ack.diy factorial.diy hello.diy iter.diy mean.diy rand.diy recurs.diy string.diy
 EXE=$(SRC:%.diy=%)
 

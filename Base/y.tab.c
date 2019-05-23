@@ -663,7 +663,7 @@ void enter(int pub, int typ, char *name) {
 	IDpush();
 	if (typ != 4) {
 		IDnew(typ, name, -4); /*create local variable to return*/
-		bpar = 8;
+		bpar = typ==3 ? 12 : 8;
 	}
 	else bpar=4;
 }
@@ -1074,13 +1074,13 @@ case 34:
 break;
 case 35:
 #line 108 "diy.y"
-	{ yyval.n = binNode(';', yystack.l_mark[-2].n, yystack.l_mark[-1].n); /*variable(RIGHT_CHILD($2)->value.s, LEFT_CHILD($2),0,0);*/ }
+	{ yyval.n = binNode(';', yystack.l_mark[-2].n, yystack.l_mark[-1].n);}
 break;
 case 36:
 #line 111 "diy.y"
 	{ yyval.n = binNode(PARAM, yystack.l_mark[-1].n, strNode(ID, yystack.l_mark[0].s));
                                   if (IDlevel() == 1) {IDnew(yystack.l_mark[-1].n->value.i, yystack.l_mark[0].s, fpar[0]*4 + 8); fpar[++fpar[0]] = yystack.l_mark[-1].n->value.i;}
-                                  if (IDlevel() == 2) {IDnew(yystack.l_mark[-1].n->value.i, yystack.l_mark[0].s, -bpar); bpar += yystack.l_mark[-1].n->attrib == NUMBER ? 8 : 4;}
+                                  if (IDlevel() >= 2) {IDnew(yystack.l_mark[-1].n->value.i, yystack.l_mark[0].s, -bpar); bpar += yystack.l_mark[-1].n->attrib == NUMBER ? 8 : 4;}
                                 }
 break;
 case 39:
