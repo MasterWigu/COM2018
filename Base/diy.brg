@@ -82,18 +82,18 @@ args:	COMMA(args, expr)			{ p->place =  ((LEFT_CHILD(p)->place) + RIGHT_CHILD(p)
 
 lvalue:	ID							1 { fprintf(outfp, pfADDR, p->value.s); }
 lvalue: LOCAL						1 { fprintf(outfp, pfLOCAL, p->value.i * (pfWORD/4)); }
-expr:	PTR(lvalue)					1 { fprintf(outfp, LEFT_CHILD(p)->info==3? pfLOAD2 : pfLOAD); }
+expr:	PTR(lvalue)					1 { if (LEFT_CHILD(p)->info==3) fprintf(outfp, pfLOAD2); else if (LEFT_CHILD(p)->info==2) fprintf(outfp, pfLDCHR); else fprintf(outfp, pfLOAD); }
 expr:	REF(lvalue)	  				{ /* No code, but keep PTR to avoid missing LOADs */ }
 lvec:	lvalue						1 { fprintf(outfp, pfLOAD); }
-lvalue:	INDEX(lvec,expr) 			1 { fprintf(outfp, pfIMM pfMUL pfADD, p->info == 3 ? 2*pfWORD : pfWORD);} 
+lvalue:	INDEX(lvec,expr) 			1 { if(p->info==3)fprintf(outfp, pfIMM pfMUL pfADD, 2*pfWORD); else if (p->info == 2) fprintf(outfp, pfIMM pfMUL pfADD, 1); else fprintf(outfp, pfIMM pfMUL pfADD, pfWORD);} 
 lvalue:	PTR(lvalue)					1 { fprintf(outfp, LEFT_CHILD(p)->info == 3  ? pfLOAD2 : pfLOAD); }
 
 
-expr:	ATR(expr,LOCAL)				1 { doATR(p); if (RIGHT_CHILD(p)->info != 3) fprintf(outfp, pfDUP pfLOCA, RIGHT_CHILD(p)->value.i * (pfWORD/4)); else fprintf(outfp, pfDUP2 pfLOCAL pfSTORE2, RIGHT_CHILD(p)->value.i * (pfWORD/4)); }
-expr:	ATR(expr,ID)				1 { doATR(p); if (RIGHT_CHILD(p)->info != 3) fprintf(outfp, pfDUP pfADDRA, RIGHT_CHILD(p)->value.s); else fprintf(outfp, pfDUP2 pfADDR pfSTORE2, RIGHT_CHILD(p)->value.s);  }
+%!expr:	ATR(expr,LOCAL)				1 { doATR(p); if (RIGHT_CHILD(p)->info != 3) fprintf(outfp, pfDUP pfLOCA, RIGHT_CHILD(p)->value.i * (pfWORD/4)); else fprintf(outfp, pfDUP2 pfLOCAL pfSTORE2, RIGHT_CHILD(p)->value.i * (pfWORD/4)); }
+%!expr:	ATR(expr,ID)				1 { doATR(p); if (RIGHT_CHILD(p)->info != 3) fprintf(outfp, pfDUP pfADDRA, RIGHT_CHILD(p)->value.s); else fprintf(outfp, pfDUP2 pfADDR pfSTORE2, RIGHT_CHILD(p)->value.s);  }
 
 assign: expr						1 { fprintf(outfp, pfDUP); }
-expr:	ATR(assign,lvalue)			1 { doATR2(p); fprintf(outfp, RIGHT_CHILD(p)->info != 3 ? pfSTORE : pfSTORE2); }
+expr:	ATR(assign,lvalue)			1 { doATR2(p); if (RIGHT_CHILD(p)->info == 3 )fprintf(outfp, pfSTORE2); else if (RIGHT_CHILD(p)->info == 2) fprintf(outfp, pfSTCHR); else fprintf(outfp, pfSTORE2); }
 expr:	ID							1 { fprintf(outfp, pfADDRV, p->value.s); }
 base:	ALLOC(alloc,lvalue)  		1 { fprintf(outfp, pfSTORE); }
 alloc:	expr						1 { fprintf(outfp, pfIMM pfMUL pfALLOC pfSP, pfWORD); }
