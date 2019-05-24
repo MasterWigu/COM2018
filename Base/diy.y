@@ -10,7 +10,7 @@
 extern int yylex();
 
 void yyerror(char *s);
-void variable(char*,Node*,Node*,int,int), function(char*,int,Node*,int,int), externs();
+void variable(char*,Node*,Node*,int,int), function(char*,int,Node*,int,int, int), externs();
 void declare(int pub, int cnst, Node *type, char *name, Node *value);
 void enter(int pub, int typ, char *name);
 int checkargs(char *name, Node *args);
@@ -63,8 +63,8 @@ file	:
 	| file public CONST tipo ID ';'	{ IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, 0); variable($5, $4, 0, 1, $2); }
 	| file public tipo ID init	{ IDnew($3->value.i, $4, 0); declare($2, 0, $3, $4, $5); variable($4, $3, $5, 0, $2);}
 	| file public CONST tipo ID init	{ IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, $6); variable($5, $4, $6, 1, $2);}
-	| file public tipo ID { enter($2, $3->value.i, $4); } finit { crFunction($2, $3, $4, $6); function($4, bpar-4, LEFT_CHILD($6), 0, $2); }
-	| file public VOID ID { enter($2, 4, $4); } finit { crFunction($2, intNode(VOID, 4), $4, $6); function($4, bpar-4, LEFT_CHILD($6), 1, $2); }
+	| file public tipo ID { enter($2, $3->value.i, $4); } finit { crFunction($2, $3, $4, $6); function($4, bpar-4, LEFT_CHILD($6), 0, $2, $3->value.i); }
+	| file public VOID ID { enter($2, 4, $4); } finit { crFunction($2, intNode(VOID, 4), $4, $6); function($4, bpar-4, LEFT_CHILD($6), 1, $2, 0); }
 	;
 
 public	:               { $$ = 0; }
@@ -160,9 +160,14 @@ lv	: ID		{ long pos; int typ = IDfind($1, &pos);
 			}
 	| ID '[' expr ']' { Node *n;
                             long pos; int siz, typ = IDfind($1, &pos);
+                            int typ2 = typ;
                             if (typ / 10 != 1 && typ % 5 != 2) yyerror("not a pointer");
                             if (pos == 0) n = strNode(ID, $1);
                             else n = intNode(LOCAL, pos);
+                            if (typ2 >= 10) typ2 -= 10;
+                            else if (typ2 % 5 == 2) typ2 = 2;
+                            if (typ2 >= 5) typ2 -= 5;
+                            n->info = typ2;
                             $$ = binNode('[', n, $3);
 			    if (typ >= 10) typ -= 10;
                             else if (typ % 5 == 2) typ = 1;

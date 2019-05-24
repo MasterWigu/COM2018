@@ -40,6 +40,7 @@ static char *mkfunc(char *s) {
 void convertDouble(Node *n);
 void doATR(Node *n);
 void doATR2(Node *n);
+void loadX(Node *n);
 #define TRACE
 static void yytrace(NODEPTR_TYPE p, int eruleno, int cost, int bestcost);
 static int doasm(Node *p) { return strcmp(LEFT_CHILD(LEFT_CHILD(p))->value.s, "asm") ? MAX_COST : 0 ; }
@@ -82,10 +83,10 @@ args:	COMMA(args, expr)			{ p->place =  ((LEFT_CHILD(p)->place) + RIGHT_CHILD(p)
 
 lvalue:	ID							1 { fprintf(outfp, pfADDR, p->value.s); }
 lvalue: LOCAL						1 { fprintf(outfp, pfLOCAL, p->value.i * (pfWORD/4)); }
-expr:	PTR(lvalue)					1 { if (LEFT_CHILD(p)->info==3) fprintf(outfp, pfLOAD2); else if (LEFT_CHILD(p)->info==2) fprintf(outfp, pfLDCHR); else fprintf(outfp, pfLOAD); }
+expr:	PTR(lvalue)					1 { loadX(p); }
 expr:	REF(lvalue)	  				{ /* No code, but keep PTR to avoid missing LOADs */ }
 lvec:	lvalue						1 { fprintf(outfp, pfLOAD); }
-lvalue:	INDEX(lvec,expr) 			1 { if(p->info==3)fprintf(outfp, pfIMM pfMUL pfADD, 2*pfWORD); else if (p->info == 2) fprintf(outfp, pfIMM pfMUL pfADD, 1); else fprintf(outfp, pfIMM pfMUL pfADD, pfWORD);} 
+lvalue:	INDEX(lvec,expr) 			1 { if(LEFT_CHILD(p)->info==3)fprintf(outfp, pfIMM pfMUL pfADD, 2*pfWORD); else if (LEFT_CHILD(p)->info == 2) fprintf(outfp, pfADD); else fprintf(outfp, pfIMM pfMUL pfADD, pfWORD);} 
 lvalue:	PTR(lvalue)					1 { fprintf(outfp, LEFT_CHILD(p)->info == 3  ? pfLOAD2 : pfLOAD); }
 
 
@@ -93,7 +94,7 @@ lvalue:	PTR(lvalue)					1 { fprintf(outfp, LEFT_CHILD(p)->info == 3  ? pfLOAD2 :
 %!expr:	ATR(expr,ID)				1 { doATR(p); if (RIGHT_CHILD(p)->info != 3) fprintf(outfp, pfDUP pfADDRA, RIGHT_CHILD(p)->value.s); else fprintf(outfp, pfDUP2 pfADDR pfSTORE2, RIGHT_CHILD(p)->value.s);  }
 
 assign: expr						1 { fprintf(outfp, pfDUP); }
-expr:	ATR(assign,lvalue)			1 { doATR2(p); if (RIGHT_CHILD(p)->info == 3 )fprintf(outfp, pfSTORE2); else if (RIGHT_CHILD(p)->info == 2) fprintf(outfp, pfSTCHR); else fprintf(outfp, pfSTORE2); }
+expr:	ATR(assign,lvalue)			1 { doATR2(p); if (RIGHT_CHILD(p)->attrib == '[' && LEFT_CHILD(RIGHT_CHILD(p))->info == 2)fprintf(outfp, pfSTCHR); else if (RIGHT_CHILD(p)->info == 3 )fprintf(outfp, pfSTORE2); else fprintf(outfp, pfSTORE); }
 expr:	ID							1 { fprintf(outfp, pfADDRV, p->value.s); }
 base:	ALLOC(alloc,lvalue)  		1 { fprintf(outfp, pfSTORE); }
 alloc:	expr						1 { fprintf(outfp, pfIMM pfMUL pfALLOC pfSP, pfWORD); }
@@ -102,7 +103,7 @@ alloc:	expr						1 { fprintf(outfp, pfIMM pfMUL pfALLOC pfSP, pfWORD); }
 
 expr:	INT							1 { fprintf(outfp, pfIMM, p->value.i); }
 expr:	REAL						1 { fprintf(outfp, pfDATA pfALIGN pfLABEL pfDOUBLE, mklbl(++lbl), p->value.r); fprintf(outfp, pfTEXT pfALIGN pfADDR pfLOAD2, mklbl(lbl)); }
-expr:	STR 						1 { lbl++; fprintf(outfp, pfRODATA pfALIGN pfLABEL, mklbl(lbl)); outstr(p->value.s); fprintf(outfp, pfTEXT pfADDR, mklbl(lbl)); }
+expr:	STR 						1 { lbl++; fprintf(outfp, pfDATA pfALIGN pfLABEL, mklbl(lbl)); outstr(p->value.s); fprintf(outfp, pfTEXT pfADDR, mklbl(lbl)); }
 expr:	CALL(ID, args)				1 { fprintf(outfp, pfCALL pfTRASH pfPUSH, mkfunc(LEFT_CHILD(p)->value.s), (int)(pfWORD*(RIGHT_CHILD(p)->place))); }
 
 expr:	ADD(expr,expr)				1 { convertDouble(p); fprintf(outfp, p->info!=3 ? pfADD : pfDADD); }
@@ -111,12 +112,12 @@ expr:	MUL(expr,expr)				1 { convertDouble(p); fprintf(outfp, p->info!=3 ? pfMUL 
 expr:	DIV(expr,expr)				1 { convertDouble(p); fprintf(outfp, p->info!=3 ? pfDIV : pfDDIV); }
 expr:	FACT(expr)					1 { fprintf(outfp, pfCALL pfTRASH pfPUSH, mkfunc("factorial"), (int)(pfWORD*1)); extrns[extcnt++] = dupstr(mkfunc("factorial"));}
 expr:	MOD(expr,expr)				1 { fprintf(outfp, pfMOD); }
-expr:	EQ(expr,expr)				1 { convertDouble(p); if(p->info!=3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfEQ); }
-expr:	NE(expr,expr)				1 { convertDouble(p); if(p->info!=3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfNE); }
-expr:	LT(expr,expr)				1 { convertDouble(p); if(p->info!=3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfLT); }
-expr:	LE(expr,expr)				1 { convertDouble(p); if(p->info!=3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfLE); }
-expr:	GT(expr,expr)				1 { convertDouble(p); if(p->info!=3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfGT); }
-expr:	GE(expr,expr)				1 { convertDouble(p); if(p->info!=3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfGE); }
+expr:	EQ(expr,expr)				1 { convertDouble(p); if(p->info==3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfEQ); }
+expr:	NE(expr,expr)				1 { convertDouble(p); if(p->info==3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfNE); }
+expr:	LT(expr,expr)				1 { convertDouble(p); if(p->info==3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfLT); }
+expr:	LE(expr,expr)				1 { convertDouble(p); if(p->info==3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfLE); }
+expr:	GT(expr,expr)				1 { convertDouble(p); if(p->info==3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfGT); }
+expr:	GE(expr,expr)				1 { convertDouble(p); if(p->info==3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfGE); }
 expr:	UMINUS(expr)				1 { fprintf(outfp, p->info==1 ? pfNEG : pfDNEG); }
 expr:	NOT(expr)					1 { fprintf(outfp, pfIMM pfEQ, 0); }
 expr:	AND(and,expr)				1 { fprintf(outfp, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
@@ -173,6 +174,16 @@ void convertDouble(Node *node) {
 		/*when program reaches here, on top of the stack is always a double (so it occupies 2 places)*/
 		fprintf(outfp, pfDPOP pfI2D pfDPUSH);
 	}
+}
+
+void loadX(Node *n) {
+	/*this is needed because when we are loading something from an index it could be a char (1byte) although it is marked as integer*/
+	if (LEFT_CHILD(n)->attrib == '[' && LEFT_CHILD(LEFT_CHILD(n))->info == 2)
+		fprintf(outfp, pfLDCHR); 
+	else if (LEFT_CHILD(n)->info==3) 
+		fprintf(outfp, pfLOAD2); 
+	else 
+		fprintf(outfp, pfLOAD); 
 }
 
 void doATR(Node *node) { /*converts rvalue to the right number of bytes to match lvalue
@@ -262,7 +273,7 @@ void variable(char *name, Node *type, Node *init, int cnst, int pub) {
 }
 
 
-void function(char *name, int enter, Node *body, int tVoid, int pub, int doub) {
+void function(char *name, int enter, Node *body, int tVoid, int pub, int typ) {
 	int i;
 	if (body->attrib == NIL) {
 		for (i = 0; i < declrcnt; i++) {
@@ -285,7 +296,7 @@ void function(char *name, int enter, Node *body, int tVoid, int pub, int doub) {
 		fprintf(outfp, pfTEXT pfALIGN pfLABEL pfENTER, mkfunc(name), enter * (pfWORD/4));
 	yyselect(stmt);
 	if (!tVoid)
-		if (doub)
+		if (typ == 3)
 			fprintf(outfp, pfLOCAL pfLOAD2 pfDPOP pfLEAVE pfRET, -4);
 		else
 			fprintf(outfp, pfLOCAL pfLOAD pfPOP pfLEAVE pfRET, -4);

@@ -1,17 +1,29 @@
 public void prints(string s)
 public void printi(integer i)
+public void printd(number a)
 public integer entry (integer argc, string *argv, string *envp) {
-	integer x;
-	integer a;
+	string y;
+	string z;
+	integer i;
 
-	a := 1;
-	printi(a);
-	for x in 3 upto 11 do {
-	prints("\nAáAAA ")
-	a := a + 2;
-	printi(a)
+	y := "ABCDEFG";
+	z := "H"
+
+	for i in 0 upto 4 step 2 do {
+	prints(y)
 	prints("\n")
+	printi(y[2])
+	prints("\n")
+	y[i] := z[0];
+	printi(i);
+	prints("\n");
+	printi(i);
+	prints("\n");
 	}
+	printi(i)
+	prints(y)
+	prints("\n")
+
 
   entry := 0
 };
