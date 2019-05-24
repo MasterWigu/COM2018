@@ -2,11 +2,15 @@ public void prints(string s)
 public void printi(integer i)
 public integer entry (integer argc, string *argv, string *envp) {
 	integer x;
+	integer a;
 
-
-	for x in 3 upto 9 step 1 do {
-		prints("AAAAA")
-		printi(x)
+	a := 1.2;
+	printi(a);
+	for x in 3 upto 11 do {
+	prints("\nAAAAA ")
+	a := a + 2;
+	printi(a)
+	prints("\n")
 	}
 
   entry := 0

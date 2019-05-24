@@ -1,12 +1,12 @@
 /*
-generated at Fri May 24 01:44:39 2019
-by $Id: pburg.c,v 2.5 2017/11/16 09:41:42 prs Exp $
+generated at Fri May 24 02:13:45 2019
+by $Id: pburg.c,v 2.4 2014/02/12 17:04:42 prs Exp $
 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #define PBURG_PREFIX "yy"
-#define PBURG_VERSION "2.5"
+#define PBURG_VERSION "2.4"
 #define MAX_COST 0x7fff
 #if defined(__STDC__) || defined(__cplusplus)
 #define YYCONST const
@@ -800,7 +800,7 @@ static void yylabel(NODEPTR_TYPE a, NODEPTR_TYPE u) {
 		}
 		break;
 	case 40: /* PMS */
-		return;
+		break;
 	case 42: /* MUL */
 		yylabel(LEFT_CHILD(a),a);
 		yylabel(RIGHT_CHILD(a),a);
@@ -1078,7 +1078,7 @@ static void yylabel(NODEPTR_TYPE a, NODEPTR_TYPE u) {
 		}
 		break;
 	case 264: /* THEN */
-		return;
+		break;
 	case 265: /* FOR */
 		yylabel(LEFT_CHILD(a),a);
 		yylabel(RIGHT_CHILD(a),a);
@@ -1102,11 +1102,11 @@ static void yylabel(NODEPTR_TYPE a, NODEPTR_TYPE u) {
 		}
 		break;
 	case 267: /* UPTO */
-		return;
+		break;
 	case 268: /* DOWNTO */
-		return;
+		break;
 	case 269: /* STEP */
-		return;
+		break;
 	case 270: /* BREAK */
 		/* brk: BREAK */
 		yytrace(a, 68, 1 + 0, p->cost[yybrk_NT]);
@@ -1141,15 +1141,15 @@ static void yylabel(NODEPTR_TYPE a, NODEPTR_TYPE u) {
 		}
 		break;
 	case 273: /* INTEGER */
-		return;
+		break;
 	case 274: /* STRING */
-		return;
+		break;
 	case 275: /* NUMBER */
-		return;
+		break;
 	case 276: /* CONST */
-		return;
+		break;
 	case 277: /* PUBLIC */
-		return;
+		break;
 	case 278: /* INCR */
 		yylabel(LEFT_CHILD(a),a);
 		/* expr: INCR(lvalue) */
@@ -1173,7 +1173,7 @@ static void yylabel(NODEPTR_TYPE a, NODEPTR_TYPE u) {
 		}
 		break;
 	case 280: /* IFX */
-		return;
+		break;
 	case 281: /* ELSE */
 		yylabel(LEFT_CHILD(a),a);
 		yylabel(RIGHT_CHILD(a),a);
@@ -1607,7 +1607,7 @@ static void yyreduce(NODEPTR_TYPE p, int goalnt)
 		break;
 	case 21: /* expr: PTR(lvalue) */
 #line 85 "diy.brg"
-{ fprintf(outfp, pfLOAD); }
+{ fprintf(outfp, LEFT_CHILD(p)->info==3? pfLOAD2 : pfLOAD); }
 		break;
 	case 22: /* expr: REF(lvalue) */
 #line 86 "diy.brg"
@@ -1659,7 +1659,7 @@ static void yyreduce(NODEPTR_TYPE p, int goalnt)
 		break;
 	case 34: /* expr: REAL */
 #line 104 "diy.brg"
-{ fprintf(outfp, pfRODATA pfALIGN pfLABEL pfDOUBLE, mklbl(++lbl), p->value.r); fprintf(outfp, pfTEXT pfALIGN pfADDR pfDPUSH, mklbl(lbl)); }
+{ fprintf(outfp, pfDATA pfALIGN pfLABEL pfDOUBLE, mklbl(++lbl), p->value.r); fprintf(outfp, pfTEXT pfALIGN pfADDR pfLOAD2, mklbl(lbl)); }
 		break;
 	case 35: /* expr: STR */
 #line 105 "diy.brg"

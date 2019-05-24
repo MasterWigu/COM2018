@@ -21,7 +21,7 @@ runtime::
 %:%.$(EXT)
 	$(COMP) $<
 	$(AS) $*.asm -o $*.o
-	#$(LD) -o $@ $*.o -L$(RUN) -l$(LIB)
+	$(LD) -o $@ $*.o -L$(RUN) -l$(LIB)
 
 clean::
 	rm -f *.o *.asm *.s *~ $(EXE)
