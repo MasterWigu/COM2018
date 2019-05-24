@@ -27,8 +27,8 @@ char *mklbl(int n) {
 }
 
 static void outstr(char *s) {
-  while (*s) fprintf(outfp, pfINTEGER, (unsigned char)*s++);
-  fprintf(outfp, pfINTEGER, 0);
+  while (*s) fprintf(outfp, pfCHAR, (unsigned char)*s++);
+  fprintf(outfp, pfCHAR, 0);
 }
 static char *mkfunc(char *s) {
   static char buf[80];

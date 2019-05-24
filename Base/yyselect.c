@@ -1,5 +1,5 @@
 /*
-generated at Fri May 24 13:21:52 2019
+generated at Fri May 24 13:25:11 2019
 by $Id: pburg.c,v 2.5 2017/11/16 09:41:42 prs Exp $
 */
 #include <stdio.h>
@@ -44,8 +44,8 @@ char *mklbl(int n) {
 }
 
 static void outstr(char *s) {
-  while (*s) fprintf(outfp, pfINTEGER, (unsigned char)*s++);
-  fprintf(outfp, pfINTEGER, 0);
+  while (*s) fprintf(outfp, pfCHAR, (unsigned char)*s++);
+  fprintf(outfp, pfCHAR, 0);
 }
 static char *mkfunc(char *s) {
   static char buf[80];
