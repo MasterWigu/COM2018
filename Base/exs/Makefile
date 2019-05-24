@@ -6,7 +6,7 @@ RUN=../run # runtime directory
 AS=nasm -felf32 # assembler command
 LD=ld -melf_i386 # loader command
 
-SRC=ack.diy
+SRC=hello.diy
 #ack.diy factorial.diy hello.diy iter.diy mean.diy rand.diy recurs.diy string.diy
 EXE=$(SRC:%.diy=%)
 
@@ -21,7 +21,7 @@ runtime::
 %:%.$(EXT)
 	$(COMP) $<
 	$(AS) $*.asm -o $*.o
-	$(LD) -o $@ $*.o -L$(RUN) -l$(LIB)
+	#$(LD) -o $@ $*.o -L$(RUN) -l$(LIB)
 
 clean::
 	rm -f *.o *.asm *.s *~ $(EXE)

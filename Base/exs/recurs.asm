@@ -30,13 +30,24 @@ $_factorial:
 	je	near $_i1
 ; IMM
 	push	dword 1
-; COPY
-	push	dword [esp]
-; LOCA
+; I2D
+	fild	dword [esp]
+	sub	esp, byte 4
+	fstp	qword [esp]
+; COPY2
+	push	dword [esp+4]
+	push	dword [esp+4]
+; LOCAL
+	lea	eax, [ebp+-4]
+	push	eax
+; STORE2
+	pop	ecx
 	pop	eax
-	mov	[ebp+-4], eax
+	mov	[ecx], eax
+	pop	eax
+	mov	[ecx+4], eax
 ; TRASH
-	add	esp, 4
+	add	esp, 8
 ; JMP
 	jmp	dword $_i2
 ; LABEL
@@ -64,21 +75,44 @@ $_i1:
 	add	esp, 4
 ; PUSH
 	push	eax
-; MUL
+; DPOP
+	fld	qword [esp]
+	add	esp, byte 8
+; I2D
+	fild	dword [esp]
+	sub	esp, byte 4
+	fstp	qword [esp]
+; DPUSH
+	sub	esp, byte 8
+	fstp	qword [esp]
+; DMUL
+	fld	qword [esp]
+	add	esp, byte 8
+	fld	qword [esp]
+	fmulp	st1
+	fstp	qword [esp]
+; COPY2
+	push	dword [esp+4]
+	push	dword [esp+4]
+; LOCAL
+	lea	eax, [ebp+-4]
+	push	eax
+; STORE2
+	pop	ecx
 	pop	eax
-	imul	dword eax, [esp]
-	mov	[esp], eax
-; COPY
-	push	dword [esp]
-; LOCA
+	mov	[ecx], eax
 	pop	eax
-	mov	[ebp+-4], eax
+	mov	[ecx+4], eax
 ; TRASH
-	add	esp, 4
+	add	esp, 8
 ; LABEL
 $_i2:
-; LOCV
-	push	dword [ebp+-4]
+; LOCAL
+	lea	eax, [ebp+-4]
+	push	eax
+; LOAD
+	pop	eax
+	push	dword [eax]
 ; POP
 	pop	eax
 ; LEAVE

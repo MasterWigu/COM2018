@@ -10,7 +10,7 @@
 extern int yylex();
 
 void yyerror(char *s);
-void variable(char*,Node*,Node*,int), function(char*,int,Node*,int), externs();
+void variable(char*,Node*,Node*,int,int), function(char*,int,Node*,int,int), externs();
 void declare(int pub, int cnst, Node *type, char *name, Node *value);
 void enter(int pub, int typ, char *name);
 int checkargs(char *name, Node *args);
@@ -59,12 +59,12 @@ master:	file					{ externs();}
 
 file	:
 	| file error ';'
-	| file public tipo ID ';'	{ IDnew($3->value.i, $4, 0); declare($2, 0, $3, $4, 0); variable($4, $3, 0, 0); }
-	| file public CONST tipo ID ';'	{ IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, 0); variable($5, $4, 0, 1); }
-	| file public tipo ID init	{ IDnew($3->value.i, $4, 0); declare($2, 0, $3, $4, $5); variable($4, $3, $5, 0);}
-	| file public CONST tipo ID init	{ IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, $6); variable($5, $4, $6, 1);}
-	| file public tipo ID { enter($2, $3->value.i, $4); } finit { crFunction($2, $3, $4, $6); function($4, bpar-4, LEFT_CHILD($6), 0); }
-	| file public VOID ID { enter($2, 4, $4); } finit { crFunction($2, intNode(VOID, 4), $4, $6); function($4, bpar-4, LEFT_CHILD($6), 1); }
+	| file public tipo ID ';'	{ IDnew($3->value.i, $4, 0); declare($2, 0, $3, $4, 0); variable($4, $3, 0, 0, $2); }
+	| file public CONST tipo ID ';'	{ IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, 0); variable($5, $4, 0, 1, $2); }
+	| file public tipo ID init	{ IDnew($3->value.i, $4, 0); declare($2, 0, $3, $4, $5); variable($4, $3, $5, 0, $2);}
+	| file public CONST tipo ID init	{ IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, $6); variable($5, $4, $6, 1, $2);}
+	| file public tipo ID { enter($2, $3->value.i, $4); } finit { crFunction($2, $3, $4, $6); function($4, bpar-4, LEFT_CHILD($6), 0, $2); }
+	| file public VOID ID { enter($2, 4, $4); } finit { crFunction($2, intNode(VOID, 4), $4, $6); function($4, bpar-4, LEFT_CHILD($6), 1, $2); }
 	;
 
 public	:               { $$ = 0; }
@@ -312,7 +312,7 @@ void crFunction(int pub, Node *type, char *name, Node *body)
 {
 	Node *bloco = LEFT_CHILD(body);
 	IDpop();
-	if (bloco != 0) { /* not a forward declaration */
+	if (bloco->attrib != NIL) { /* not a forward declaration */
 		long par;
 		int fwd = IDfind(name, &par);
 		if (fwd > 40) yyerror("duplicate function");

@@ -1,4 +1,13 @@
-public void printd(number s)
+public void prints(string s)
+public void printi(integer i)
 public integer entry (integer argc, string *argv, string *envp) {
+	integer x;
+
+
+	for x in 3 upto 9 step 1 do {
+		prints("AAAAA")
+		printi(x)
+	}
+
   entry := 0
 };

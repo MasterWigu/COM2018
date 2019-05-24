@@ -4,8 +4,6 @@ segment	.data
 align	4
 ; LABEL
 $n:
-; GLOBL
-global	$n:object
 ; INTEGER
 	dd	5
 ; TEXT
@@ -128,7 +126,7 @@ segment	.text
 ; CALL
 	call	$_printd
 ; TRASH
-	add	esp, 4
+	add	esp, 8
 ; PUSH
 	push	eax
 ; TRASH
@@ -150,8 +148,12 @@ segment	.text
 	mov	[ebp+-4], eax
 ; TRASH
 	add	esp, 4
-; LOCV
-	push	dword [ebp+-4]
+; LOCAL
+	lea	eax, [ebp+-4]
+	push	eax
+; LOAD
+	pop	eax
+	push	dword [eax]
 ; POP
 	pop	eax
 ; LEAVE

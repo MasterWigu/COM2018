@@ -29,7 +29,7 @@
 extern int yylex();
 
 void yyerror(char *s);
-void variable(char*,Node*,Node*,int), function(char*,int,Node*,int), externs();
+void variable(char*,Node*,Node*,int,int), function(char*,int,Node*,int,int), externs();
 void declare(int pub, int cnst, Node *type, char *name, Node *value);
 void enter(int pub, int typ, char *name);
 int checkargs(char *name, Node *args);
@@ -739,7 +739,7 @@ void crFunction(int pub, Node *type, char *name, Node *body)
 {
 	Node *bloco = LEFT_CHILD(body);
 	IDpop();
-	if (bloco != 0) { /* not a forward declaration */
+	if (bloco->attrib != NIL) { /* not a forward declaration */
 		long par;
 		int fwd = IDfind(name, &par);
 		if (fwd > 40) yyerror("duplicate function");
@@ -954,19 +954,19 @@ case 1:
 break;
 case 4:
 #line 62 "diy.y"
-	{ IDnew(yystack.l_mark[-2].n->value.i, yystack.l_mark[-1].s, 0); declare(yystack.l_mark[-3].i, 0, yystack.l_mark[-2].n, yystack.l_mark[-1].s, 0); variable(yystack.l_mark[-1].s, yystack.l_mark[-2].n, 0, 0); }
+	{ IDnew(yystack.l_mark[-2].n->value.i, yystack.l_mark[-1].s, 0); declare(yystack.l_mark[-3].i, 0, yystack.l_mark[-2].n, yystack.l_mark[-1].s, 0); variable(yystack.l_mark[-1].s, yystack.l_mark[-2].n, 0, 0, yystack.l_mark[-3].i); }
 break;
 case 5:
 #line 63 "diy.y"
-	{ IDnew(yystack.l_mark[-2].n->value.i+5, yystack.l_mark[-1].s, 0); declare(yystack.l_mark[-4].i, 1, yystack.l_mark[-2].n, yystack.l_mark[-1].s, 0); variable(yystack.l_mark[-1].s, yystack.l_mark[-2].n, 0, 1); }
+	{ IDnew(yystack.l_mark[-2].n->value.i+5, yystack.l_mark[-1].s, 0); declare(yystack.l_mark[-4].i, 1, yystack.l_mark[-2].n, yystack.l_mark[-1].s, 0); variable(yystack.l_mark[-1].s, yystack.l_mark[-2].n, 0, 1, yystack.l_mark[-4].i); }
 break;
 case 6:
 #line 64 "diy.y"
-	{ IDnew(yystack.l_mark[-2].n->value.i, yystack.l_mark[-1].s, 0); declare(yystack.l_mark[-3].i, 0, yystack.l_mark[-2].n, yystack.l_mark[-1].s, yystack.l_mark[0].n); variable(yystack.l_mark[-1].s, yystack.l_mark[-2].n, yystack.l_mark[0].n, 0);}
+	{ IDnew(yystack.l_mark[-2].n->value.i, yystack.l_mark[-1].s, 0); declare(yystack.l_mark[-3].i, 0, yystack.l_mark[-2].n, yystack.l_mark[-1].s, yystack.l_mark[0].n); variable(yystack.l_mark[-1].s, yystack.l_mark[-2].n, yystack.l_mark[0].n, 0, yystack.l_mark[-3].i);}
 break;
 case 7:
 #line 65 "diy.y"
-	{ IDnew(yystack.l_mark[-2].n->value.i+5, yystack.l_mark[-1].s, 0); declare(yystack.l_mark[-4].i, 1, yystack.l_mark[-2].n, yystack.l_mark[-1].s, yystack.l_mark[0].n); variable(yystack.l_mark[-1].s, yystack.l_mark[-2].n, yystack.l_mark[0].n, 1);}
+	{ IDnew(yystack.l_mark[-2].n->value.i+5, yystack.l_mark[-1].s, 0); declare(yystack.l_mark[-4].i, 1, yystack.l_mark[-2].n, yystack.l_mark[-1].s, yystack.l_mark[0].n); variable(yystack.l_mark[-1].s, yystack.l_mark[-2].n, yystack.l_mark[0].n, 1, yystack.l_mark[-4].i);}
 break;
 case 8:
 #line 66 "diy.y"
@@ -974,7 +974,7 @@ case 8:
 break;
 case 9:
 #line 66 "diy.y"
-	{ crFunction(yystack.l_mark[-4].i, yystack.l_mark[-3].n, yystack.l_mark[-2].s, yystack.l_mark[0].n); function(yystack.l_mark[-2].s, bpar-4, LEFT_CHILD(yystack.l_mark[0].n), 0); }
+	{ crFunction(yystack.l_mark[-4].i, yystack.l_mark[-3].n, yystack.l_mark[-2].s, yystack.l_mark[0].n); function(yystack.l_mark[-2].s, bpar-4, LEFT_CHILD(yystack.l_mark[0].n), 0, yystack.l_mark[-4].i); }
 break;
 case 10:
 #line 67 "diy.y"
@@ -982,7 +982,7 @@ case 10:
 break;
 case 11:
 #line 67 "diy.y"
-	{ crFunction(yystack.l_mark[-4].i, intNode(VOID, 4), yystack.l_mark[-2].s, yystack.l_mark[0].n); function(yystack.l_mark[-2].s, bpar-4, LEFT_CHILD(yystack.l_mark[0].n), 1); }
+	{ crFunction(yystack.l_mark[-4].i, intNode(VOID, 4), yystack.l_mark[-2].s, yystack.l_mark[0].n); function(yystack.l_mark[-2].s, bpar-4, LEFT_CHILD(yystack.l_mark[0].n), 1, yystack.l_mark[-4].i); }
 break;
 case 12:
 #line 70 "diy.y"
