@@ -76,24 +76,24 @@ segment	.rodata
 align	4
 ; LABEL
 $_i3:
-; INTEGER
-	dd	10
-; INTEGER
-	dd	65
-; INTEGER
-	dd	195
-; INTEGER
-	dd	161
-; INTEGER
-	dd	65
-; INTEGER
-	dd	65
-; INTEGER
-	dd	65
-; INTEGER
-	dd	32
-; INTEGER
-	dd	0
+; CHAR
+	db	0x0A
+; CHAR
+	db	0x41
+; CHAR
+	db	0xC3
+; CHAR
+	db	0xA1
+; CHAR
+	db	0x41
+; CHAR
+	db	0x41
+; CHAR
+	db	0x41
+; CHAR
+	db	0x20
+; CHAR
+	db	0x00
 ; TEXT
 segment	.text
 ; ADDR
@@ -144,10 +144,10 @@ segment	.rodata
 align	4
 ; LABEL
 $_i4:
-; INTEGER
-	dd	10
-; INTEGER
-	dd	0
+; CHAR
+	db	0x0A
+; CHAR
+	db	0x00
 ; TEXT
 segment	.text
 ; ADDR
