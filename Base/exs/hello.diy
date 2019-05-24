@@ -4,10 +4,10 @@ public integer entry (integer argc, string *argv, string *envp) {
 	integer x;
 	integer a;
 
-	a := 1.2;
+	a := 1;
 	printi(a);
 	for x in 3 upto 11 do {
-	prints("\nAAAAA ")
+	prints("\nAáAAA ")
 	a := a + 2;
 	printi(a)
 	prints("\n")

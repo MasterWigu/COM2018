@@ -10,28 +10,8 @@ $_entry:
 	push	ebp
 	mov	ebp, esp
 	sub	esp, 12
-; DATA
-segment	.data
-; ALIGN
-align	4
-; LABEL
-$_i1:
-; DOUBLE
-	dq	1.200000e+00
-; TEXT
-segment	.text
-; ALIGN
-align	4
-; ADDR
-	push	dword $_i1
-; LOAD2
-	pop	eax
-	push	dword [eax+4]
-	push	dword [eax]
-; D2I
-	fld	qword [esp]
-	add	esp, byte 4
-	fistp	dword [esp]
+; IMM
+	push	dword 1
 ; COPY
 	push	dword [esp]
 ; LOCA
@@ -61,7 +41,7 @@ align	4
 	pop	eax
 	mov	[ebp+-8], eax
 ; LABEL
-$_i2:
+$_i1:
 ; LOCAL
 	lea	eax, [ebp+-8]
 	push	eax
@@ -70,6 +50,16 @@ $_i2:
 	push	dword [eax]
 ; IMM
 	push	dword 11
+; DCMP
+	fld	qword [esp+8]
+	fld	qword [esp]
+	add	esp, byte 12
+	fsubp	st1
+	fxtract
+	ffree	st1
+	fistp	dword [esp]
+; IMM
+	push	dword 0
 ; LE
 	pop	eax
 	xor	ecx, ecx
@@ -79,33 +69,35 @@ $_i2:
 ; JZ
 	pop	eax
 	cmp	eax, byte 0
-	je	near $_i3
+	je	near $_i2
 ; RODATA
 segment	.rodata
 ; ALIGN
 align	4
 ; LABEL
-$_i4:
-; CHAR
-	db	0x0A
-; CHAR
-	db	0x41
-; CHAR
-	db	0x41
-; CHAR
-	db	0x41
-; CHAR
-	db	0x41
-; CHAR
-	db	0x41
-; CHAR
-	db	0x20
-; CHAR
-	db	0x00
+$_i3:
+; INTEGER
+	dd	10
+; INTEGER
+	dd	65
+; INTEGER
+	dd	195
+; INTEGER
+	dd	161
+; INTEGER
+	dd	65
+; INTEGER
+	dd	65
+; INTEGER
+	dd	65
+; INTEGER
+	dd	32
+; INTEGER
+	dd	0
 ; TEXT
 segment	.text
 ; ADDR
-	push	dword $_i4
+	push	dword $_i3
 ; CALL
 	call	$_prints
 ; TRASH
@@ -151,15 +143,15 @@ segment	.rodata
 ; ALIGN
 align	4
 ; LABEL
-$_i5:
-; CHAR
-	db	0x0A
-; CHAR
-	db	0x00
+$_i4:
+; INTEGER
+	dd	10
+; INTEGER
+	dd	0
 ; TEXT
 segment	.text
 ; ADDR
-	push	dword $_i5
+	push	dword $_i4
 ; CALL
 	call	$_prints
 ; TRASH
@@ -185,9 +177,9 @@ segment	.text
 	pop	eax
 	mov	[ebp+-8], eax
 ; JMP
-	jmp	dword $_i2
+	jmp	dword $_i1
 ; LABEL
-$_i3:
+$_i2:
 ; IMM
 	push	dword 0
 ; COPY
@@ -200,13 +192,11 @@ $_i3:
 ; LOCAL
 	lea	eax, [ebp+-4]
 	push	eax
-; LOAD2
+; LOAD
 	pop	eax
-	push	dword [eax+4]
 	push	dword [eax]
-; DPOP
-	fld	qword [esp]
-	add	esp, byte 8
+; POP
+	pop	eax
 ; LEAVE
 	leave
 ; RET

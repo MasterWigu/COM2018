@@ -27,8 +27,8 @@ char *mklbl(int n) {
 }
 
 static void outstr(char *s) {
-  while (*s) fprintf(outfp, pfCHAR, (unsigned char)*s++);
-  fprintf(outfp, pfCHAR, 0);
+  while (*s) fprintf(outfp, pfINTEGER, (unsigned char)*s++);
+  fprintf(outfp, pfINTEGER, 0);
 }
 static char *mkfunc(char *s) {
   static char buf[80];
@@ -111,13 +111,12 @@ expr:	MUL(expr,expr)				1 { convertDouble(p); fprintf(outfp, p->info!=3 ? pfMUL 
 expr:	DIV(expr,expr)				1 { convertDouble(p); fprintf(outfp, p->info!=3 ? pfDIV : pfDDIV); }
 expr:	FACT(expr)					1 { fprintf(outfp, pfCALL pfTRASH pfPUSH, mkfunc("factorial"), (int)(pfWORD*1)); extrns[extcnt++] = dupstr(mkfunc("factorial"));}
 expr:	MOD(expr,expr)				1 { fprintf(outfp, pfMOD); }
-expr:	OR(expr,expr)				1 { fprintf(outfp, pfOR); }
-expr:	EQ(expr,expr)				1 { fprintf(outfp, pfEQ); }
-expr:	NE(expr,expr)				1 { fprintf(outfp, pfNE); }
-expr:	LT(expr,expr)				1 { fprintf(outfp, pfLT); }
-expr:	LE(expr,expr)				1 { fprintf(outfp, pfLE); }
-expr:	GT(expr,expr)				1 { fprintf(outfp, pfGT); }
-expr:	GE(expr,expr)				1 { fprintf(outfp, pfGE); }
+expr:	EQ(expr,expr)				1 { convertDouble(p); if(p->info!=3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfEQ); }
+expr:	NE(expr,expr)				1 { convertDouble(p); if(p->info!=3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfNE); }
+expr:	LT(expr,expr)				1 { convertDouble(p); if(p->info!=3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfLT); }
+expr:	LE(expr,expr)				1 { convertDouble(p); if(p->info!=3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfLE); }
+expr:	GT(expr,expr)				1 { convertDouble(p); if(p->info!=3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfGT); }
+expr:	GE(expr,expr)				1 { convertDouble(p); if(p->info!=3) fprintf(outfp, pfDCMP pfIMM, 0); fprintf(outfp, pfGE); }
 expr:	UMINUS(expr)				1 { fprintf(outfp, p->info==1 ? pfNEG : pfDNEG); }
 expr:	NOT(expr)					1 { fprintf(outfp, pfIMM pfEQ, 0); }
 expr:	AND(and,expr)				1 { fprintf(outfp, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
@@ -158,7 +157,7 @@ expr:	POSINC(lvalue)				1 { fprintf(outfp, pfDUP pfLOAD pfSWAP pfINCR, 1); }
 expr:	POSDEC(lvalue)				1 { fprintf(outfp, pfDUP pfLOAD pfSWAP pfDECR, 1); }
 
 
-%!NOT WORKING: for; continue?
+%!NOT WORKING: for; continue?, atr with char, index with string, cmps 
 
 %%
 #include "y.tab.h"
