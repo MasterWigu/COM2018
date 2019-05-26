@@ -1,0 +1,20 @@
+public void prints(string s)
+
+void f(integer a, integer b) {
+  prints("f()\n");
+};
+
+integer g() {
+  prints("g()\n");
+  g:=1;
+};
+
+integer h() {
+  prints("h()\n");
+  h:=1;
+};
+
+public integer entry (integer argc, string *argv, string *envp) {
+  f(g(),h());
+  entry := 0;
+};

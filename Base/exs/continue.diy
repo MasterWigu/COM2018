@@ -1,0 +1,20 @@
+public void prints(string s)
+
+public integer entry (integer argc, string *argv, string *envp) {
+  integer x
+  x := 1
+  do {
+    prints("a")
+    ++x
+    do {
+      prints("b")
+      if x > 3 then break 2
+      do {
+        prints("c")
+        continue 3
+      } while 0
+    } while 0
+  } while 0
+  prints("\n")
+  entry := 0
+};

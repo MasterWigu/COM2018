@@ -1,0 +1,33 @@
+public void prints(string s)
+public void println()
+public void printd(number d)
+public number atod(string s)
+public integer atoi(string s)
+
+number func(number x) { func := x*x*x - 4*x*x-11*x+30; };
+
+number bissect(number a, number b, integer n) {
+  integer i;
+
+  i := 0;
+  if i < n then do {
+    bissect := (a + b) / 2;
+    if func(a) * func(bissect) > 0 then
+      a := bissect;
+    else
+      b := bissect;
+    i := i + 1;
+  } while i < n
+};
+
+public integer entry (integer argc, string *argv, string *envp) {
+  if argc > 3 then {
+    number x;
+    x := bissect(atod(argv[1]), atod(argv[2]), atoi(argv[3]));
+    prints("zero("); printd(x); prints(") = "); printd(func(x)); println();
+    entry := 0;
+  } else {
+    prints("USE: "); prints(argv[0]); prints(" a b iter\n");
+    entry := 1;
+  }
+};

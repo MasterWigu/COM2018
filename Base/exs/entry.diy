@@ -1,0 +1,10 @@
+public void printi(integer i)
+public void println()
+
+public integer entry (integer argc, string *argv, string *envp) {
+  printi(argc)
+  println()
+  if argc >= 1 then
+    entry(argc - 1, argv, envp)
+  entry := 0;
+};

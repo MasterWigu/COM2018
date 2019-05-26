@@ -1,0 +1,14 @@
+public void prints(string s)
+string s := "hello"
+string x := "world"
+public integer entry (integer argc, string *argv, string *envp) {
+  if -5 then
+    prints("negativo!\n")
+  if 12.3 then
+    prints("real!\n")
+  if s[5] then
+    prints("caracter!\n")
+  if "hello" then
+    prints("string!\n")
+  entry := 0
+};
