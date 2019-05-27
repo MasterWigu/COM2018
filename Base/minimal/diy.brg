@@ -1,0 +1,63 @@
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "node.h"
+#include "postfix.h"
+
+extern FILE *outfp;
+static int trash, lbl;
+static char *mklbl(int n) {
+  static char buf[20];
+  sprintf(buf, "_i%d", n);
+  return strcpy(malloc(strlen(buf)+1),buf);
+}
+static void outstr(char *s) {
+  while (*s) fprintf(outfp, pfCHAR, (unsigned char)*s++);
+  fprintf(outfp, pfCHAR, 0);
+}
+static char *mkfunc(char *s) {
+  static char buf[80];
+  strcpy(buf, "_");
+  strcat(buf, s);
+  return buf;
+}
+%}
+%term LIST=';' ARG=',' ADD='+' SUB='-' MUL='*' DIV='/' MOD='%' LT='<' GT='>'
+%term EQ='=' AND='&' OR='|' FACT='!' VEC='[' BLK='{' ALLOC='#'
+%include "y.tab.h"
+%%
+stmt:	NIL
+stmt:	VOID
+stmt:	LIST(stmt,stmt)
+stmt:	BLK(stmt)
+stmt:	int		1 { fprintf(outfp, pfTRASH, 4); }
+int:	ID		1 { fprintf(outfp, pfADDR, p->value.s); }
+int:	LOCAL		1 { fprintf(outfp, pfLOCAL, p->value.i); }
+int:	PTR(int)	1 { fprintf(outfp, pfLOAD); }
+int:	ATR(int,ID)	1 { fprintf(outfp, pfADDRA, RIGHT_CHILD(p)->value.s); }
+int:	ATR(int,LOCAL)	1 { fprintf(outfp, pfLOCA, RIGHT_CHILD(p)->value.i); }
+int:	INT		1 { fprintf(outfp, pfIMM, p->value.i); }
+int:	ADD(int,int)	1 { fprintf(outfp, pfADD); }
+int:	MUL(int,int)	1 { fprintf(outfp, pfMUL); }
+int:	STR		1 { char *l = mklbl(++lbl);
+			    fprintf(outfp, pfRODATA pfALIGN pfLABEL, l);
+			    outstr(p->value.s);
+			    fprintf(outfp, pfTEXT pfADDR, l); }
+stack: NIL { trash = 0; }
+stack: VOID { trash = 0; }
+stack: int { trash = 4; }
+stack: ARG(stack,int) { trash += 4; }
+int: CALL(ID,stack) 1 { fprintf(outfp, pfCALL pfTRASH pfPUSH, mkfunc(LEFT_CHILD(p)->value.s), trash); }
+%%
+void dofunc(int pub, Node *type, char *name, Node *body)
+{
+  extern int yyerror(char*);
+  if (body == 0 || LEFT_CHILD(body) == 0) {
+    if (pub) fprintf(outfp, pfEXTRN, mkfunc(name));
+    return;
+  }
+  fprintf(outfp, pfTEXT pfALIGN pfGLOBL pfLABEL pfENTER, mkfunc(name), pfFUNC, mkfunc(name), 20);
+  if (yyselect(LEFT_CHILD(body)) == 1) yyerror("No match for syntactic tree.");
+  fprintf(outfp, pfLOCV pfPOP pfLEAVE pfRET, -4);
+}
